@@ -21,7 +21,7 @@ Team — IndexFive
 - Biar Adam — https://github.com/biaradam36-bit
 - Youssef Benhammouda — https://github.com/Youssefbenhammouda/
 - Yahia Belfquih — https://github.com/At1asBe
-- Zakarya Aze-Dine — https://github.com/zakaryaazedine
+- Zakarya Azedine — https://github.com/zakaryaazedine
 - Adam Ajerouassi — https://github.com/Patpoooot
 
 Repository Structure
