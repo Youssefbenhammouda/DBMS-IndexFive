@@ -195,9 +195,26 @@ Attributes: \texttt{cert\_id}.
 
 
 \section{Discussion}
-Challenges faced, observations, lessons learned.
+\textbf{Challenges faced}:
+The challenges we encountered are:
+Modeling the precription system .Since each prescription
+can include multiple medications and each medication needs its own dosage and duration details.
+To solve that,we had to create a specific relationship structure to capture this complexity.
+The emergency section also posed questions:should we require staff assignment for every emergency,or allow for cases where this Information
+might be missing ?
+
+\textbf{Observations}:
+During the designing process, it became evident that the nature of relationships within the healthcare domain was by nature complex, particularly many-to-many relationships between entities like patients and staff with multiple appointments, and prescriptions and associated multiple medications. We added time with various components—appointment time, duration of the prescription, and timestamps for emergencies—as notable components needing accurate modeling to support report accuracy and operations. Further, we needed to interweave varying staff roles into one structure (practitioner, caregiver, technical staff), indicating the need for a design that was both flexible and exact for all entities. Through our process, we observed and confirmed clinical databases must balance detailed transactional tracking with the need to facilitate a high-level analytic questioning.
+
+\textbf{lessons learned}:
+Through this project,we recognized that database design strikes the right balance between theoretical perfection and real-world uusability.
+By defining ralationship constraints(e.g.specifying that each staff member belongs to one department while a department can contain many staff ).
+Most significantly,we understood the importance of designing database not only for present operational needs but also for future scalability by supporting analytics and expansion.
 
 \section{Conclusion}
-Short summary of the deliverable outcome.
+This deliverable presents a complete conceptual design for the MNHS database system by creating an Entity-Relationship(ER) diagram all the healthcare entities with their attributes and their realationships.
+The design follows the project requirementswhile establishing a scalable foundation for both
+operational efficiency and future analytical needs.
+
 
 \end{document}
