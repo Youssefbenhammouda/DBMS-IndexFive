@@ -190,6 +190,8 @@ This table represents the `Technical` entity, which represents non-caregiving ro
 **Description:**
 This table represents the `Department` entity, which captures informations about the different departments within the hospital, including: Name and Specialty,uniquely identified by the `DEP_ID` primary key.
 
+---
+
 ### **Entity: `Hospital`**
 
 **Attributes:**
