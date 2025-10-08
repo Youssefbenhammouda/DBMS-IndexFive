@@ -17,8 +17,9 @@
 **Description:**
 This table represents the `Patient` entity, which stores essential informations about individuals receiving medical care within MNHS system, including :CIN, Name, Sex, Birth, Blood group and phone number, uniquely identified by the `IID` primary key.
 
+---
 
-### **Entity: `Contact Location`**
+### **Entity: `Contact_Location`**
 
 **Attributes:**
 
@@ -34,8 +35,79 @@ This table represents the `Patient` entity, which stores essential informations 
   * `Phone (VARCHAR(20))`
 
 **Description:**
-This table represents the `Contact Location` entity, which stores detailed address and contact information, including: city, province, street, number, postal code and phone number, uniquely identified by the `CLID` primary key.
+This table represents the `Insurance` entity, which stores information about patient insurance coverage, including the insurance type (such as CNOPS, CNSS, RAMED, or private), uniquely identified by the `ExID` primary key.
 
+---
+
+
+### **Relationship: `Have`**
+**Attributes:**  
+- **Primary Key:** `CLID,IID`  
+- **Foreign Keys:**  
+  - `CLID → Contact_Location(CLID)`
+  - `IID → Patient(IID)`
+
+
+**Description:**  
+This table represents the `Have` relationship, which establishes a many-to-many association between patients and their contact locations.
+
+---
+
+### **Entity: `Insurance`**
+
+**Attributes:**
+
+* **Primary Key:** `InsID`
+* **Other Attributes:**
+
+  * `InsID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `ins_type (VARCHAR(10), CHECK (ins_type in ('CNOPS', 'CNSS', 'RAMED', 'private') OR ins_type IS NULL)`
+
+**Description:**
+This table represents the `Insurance` entity, which stores information about patient insurance coverage, including the insurance type (such as CNOPS, CNSS, RAMED, or private), uniquely identified by the `ExID` primary key.
+
+---
+
+### Entity: `Expense`
+**Attributes:**
+* **Primary Key:** `ExID`
+* **Other Attributes:**
+  * `ExID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `total (Double, NOT NULL)`
+
+**Description:**
+This table represents the `Expense` entity, which captures the financial aspects related to patient care, including the total expenses incurred during medical treatments, uniquely identified by the `ExID` primary key.
+
+---
+
+
+
+### **Relationship: `Attached`**
+**Attributes:**  
+- **Primary Key:** `ExID,InsID`
+- **Foreign Keys:**
+  - `ExID → Expense(ExID)`
+  - `InsID → Insurance(InsID)`
+
+**Description:**
+This table represents the `Attached` relationship, which establishes a many-to-many association between expenses and their associated contact locations.
+
+---
+
+### **Relationship: `Coveres`**
+
+**Attributes:**
+
+* **Primary Key:** `ExID,IID`
+* **Foreign Keys:**
+
+  * `InsID → Insurance(InsID)`
+  * `IID → Patient(IID)`
+
+**Description:**
+This table represents the `Covers` relationship, which establishes a many-to-many association between patients and their insurance coverage.
+
+---
 
 ### **Entity: `Staff`**
 
@@ -55,6 +127,7 @@ This table represents the `Staff` entity, which captures the common informations
 
 ### **`Practioner,Caregiving and Technical entities are a sub-type of Staff(i.e inherits attributes from Staff)`**
 
+---
 
 ### **Entity: `Practioner`**
 
@@ -73,6 +146,7 @@ This table represents the `Staff` entity, which captures the common informations
 This table represents the `Practioner` entity, which represents licensed medical staff, including:
 Name,Status,License_Number and Specialty,uniquely identified by the `STAFF_ID` primary key.
 
+---
 
 ### **Entity: `Caregiving`**
 
@@ -90,6 +164,7 @@ Name,Status,License_Number and Specialty,uniquely identified by the `STAFF_ID` p
 **Description:**
 This table represents the `Caregiving` entity, which represents specialty and license details, including: Name,Status,Grade and Ward,uniquely identified by the `STAFF_ID` primary key,because it is a sub-type of Staff(i.e inherits attributes from Staff).
 
+---
 
 ### **Entity: `Technical`**
 
@@ -107,6 +182,7 @@ This table represents the `Caregiving` entity, which represents specialty and li
 **Description:**
 This table represents the `Technical` entity, which represents non-caregiving roles, including: Name,Status,Modality and Certifications,uniquely identified by the `STAFF_ID` primary key.
 
+---
 
 ### **Entity: `Department`**
 
