@@ -1,0 +1,10 @@
+CREATE TABLE Contact_Location (
+    CLID INT NOT NULL AUTO_INCREMENT,
+    city VARCHAR(100) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    Street VARCHAR(500) NOT NULL,
+    number VARCHAR(10) NOT NULL,
+    postal_code VARCHAR(10) NOT NULL,
+    phone VARCHAR(20),
+    PRIMARY KEY (CLID)
+);
