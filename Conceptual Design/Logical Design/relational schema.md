@@ -53,7 +53,7 @@ This table represents the `Staff` entity, which captures the common informations
 
 
 
-**Practioner,Caregiving and Technical entities are a sub-type of Staff(i.e inherits attributes from Staff)**
+### **`Practioner,Caregiving and Technical entities are a sub-type of Staff(i.e inherits attributes from Staff)`**
 
 
 ### **Entity: `Practioner`**
