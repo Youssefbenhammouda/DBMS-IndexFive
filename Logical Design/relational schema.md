@@ -205,3 +205,171 @@ This table represents the `Department` entity, which captures informations about
 
 **Description:**
 This table represents the `Hospital` entity, which captures each hospital's name, city and region, uniquely identified by the the `HID` primary key.
+
+---
+
+
+
+### **Entity: `Clinical_Activity`**
+
+**Attributes:**
+
+* **Primary Key:** `CAID`
+* **Foreign Keys:**
+  * `STAFF_ID → Staff(STAFF_ID)`
+  *  `IID → Patient(IID)`
+  * `ExID → Expense(ExID)`
+  * `DEP_ID → Department(DEP_ID)`
+* **Other Attributes:**
+
+  * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `STAFF_ID → Staff(STAFF_ID)`
+  *  `IID → Patient(IID)`
+  * `ExID → Expense(ExID)`
+  * `DEP_ID → Department(DEP_ID)`
+  * `Time TIME`
+  * `Date DATE`
+
+**Description:**
+This table represents the `Clinical_Activity` entity, which captures the common informations shared by every Clinical Activity, including: Date and Time,uniquely identified by the `CAID` primary key.
+
+
+
+### **`Appoitment and Emergency entities are a sub-type of Clinical Activity(i.e inherits attributes from Clinical Activity)`**
+
+---
+
+### **Entity: `Appoitment`**
+
+**Attributes:**
+
+* **Primary Key:** `CAID`
+* **Foreign Keys:**
+  * `STAFF_ID → Staff(STAFF_ID)`
+  *  `IID → Patient(IID)`
+  * `EcID → Expense(ExID)`
+  * `DEP_ID → Department(DEP_ID)`
+* **Other Attributes:**
+
+  * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `STAFF_ID → Staff(STAFF_ID)`
+  *  `IID → Patient(IID)`
+  * `ExID → Expense(ExID)`
+  * `DEP_ID → Department(DEP_ID)`
+  * `Time TIME`
+  * `Date DATE`
+
+**Description:**
+This table represents the `Appoitment` entity,including:
+Status,and Reason,uniquely identified by the `CAID` primary key.
+
+---
+
+### **Entity: `Emergency`**
+
+**Attributes:**
+
+* **Primary Key:** `CAID`
+* **Foreign Keys:**
+  * `STAFF_ID → Staff(STAFF_ID)`
+  *  `IID → Patient(IID)`
+  * `EcID → Expense(ExID)`
+  * `DEP_ID → Department(DEP_ID)`
+* **Other Attributes:**
+
+  * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `STAFF_ID → Staff(STAFF_ID)`
+  *  `IID → Patient(IID)`
+  * `ExID → Expense(ExID)`
+  * `DEP_ID → Department(DEP_ID)`
+  * `Time TIME`
+  * `Date DATE`
+
+**Description:**
+This table represents the `Emergency` entity, including: Triahe_Level and Outcome,uniquely identified by the `CAID` primary key,because it is a sub-type of Clinical Activity(i.e inherits attributes from  Clinical Activity).
+
+---
+
+
+### Entity: `Prescription`
+**Attributes:**
+* **Primary Key:** `PID`
+* **Other Attributes:**
+  * `PID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `Date_Issued DATE`
+
+**Description:**
+This table represents the `Prescription` entity, including Date when the prescription was issed, uniquely identified by the `PID` primary key.
+
+---
+
+
+
+
+### Entity: `Medication`
+**Attributes:**
+* **Primary Key:** `DrugID`
+* **Other Attributes:**
+  * `DrugID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `Class (VARCHAR(100), NOT NULL)`
+  * `Name (VARCHAR(100), NOT NULL)`
+  * `Form (VARCHAR(50), NOT NULL)`
+  * `Strength (VARCHAR(50), NOT NULL)`
+  * `Active_Ingredient (VARCHAR(100), NOT NULL)`
+  * `Manufacturer (VARCHAR(100), NOT NULL)`
+**Description:**
+This table represents the ``Medication` entity. Each record corresponds to a specific drug, uniquely identified by DrugID, and includes details such as its class, form, strength, active ingredient, and manufacturer.
+---
+
+
+### **Relationship: `Stock`**
+
+**Attributes:**
+
+* **Primary Key:** `HID,DrugID`
+* **Foreign Keys:**
+
+  * `HID → Hospital(HID)`
+  * `DrugID → Medication(DrugID)`
+* **Other Attributes:**
+  * `DrugID (INT, NOT NULL)`
+  * `HID (INT, NOT NULL)`
+  * `Unit_Price (DECIMAL(10,2), NOT NULL)`
+  * `Stock_Timestamp (DATETIME, NOT NULL)`
+  * `Quantity (INT, NOT NULL)`
+  * `Reorder_Level (INT, NOT NULL)`
+
+**Description:**
+This table represents the `Stock` relationship, which establishes a many-to-many association between Hospital and their hospital.
+
+---
+
+
+### **Relationship: `include`**
+
+**Attributes:**
+
+* **Primary Key:** `PID,DrugID`
+* **Foreign Keys:**
+
+  * `PID → Prescription(PID)`
+  * `DrugID → Medication(DrugID)`
+
+**Description:**
+This table represents the `include` relationship, which establishes a many-to-many association between Medication and their Prescription.
+
+---
+
+### **Relationship: `work_in`**
+
+**Attributes:**
+
+* **Primary Key:** `STAFF_ID,DEP_ID`
+* **Foreign Keys:**
+
+  * `STAFF_ID → Staff(STAFF_ID)`
+  * `DEP_ID → Department(DEP_ID)`
+
+**Description:**
+This table represents the `work_in` relationship, which captures the assignment of staff members to departments. Each staff member works in at least one department and can work in multiple departments, while each department can have many staff members. The combination of STAFF_ID and DEP_ID uniquely identifies each assignment, reflecting a many-to-many relationship between staff and departments.
+---
