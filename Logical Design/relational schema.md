@@ -71,38 +71,30 @@ This table represents the `Insurance` entity, which stores information about pat
 ### Entity: `Expense`
 **Attributes:**
 * **Primary Key:** `ExID`
+* **Foreign Keys:**
+  * `InsID → Insurance(InsID)`
 * **Other Attributes:**
   * `ExID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
   * `total (Double, NOT NULL)`
+  * `InsID (INT, NOT NULL)`
 
 **Description:**
 This table represents the `Expense` entity, which captures the financial aspects related to patient care, including the total expenses incurred during medical treatments, uniquely identified by the `ExID` primary key.
 
 ---
 
-
-
-### **Relationship: `Attached`**
-**Attributes:**  
-- **Primary Key:** `ExID,InsID`
-- **Foreign Keys:**
-  - `ExID → Expense(ExID)`
-  - `InsID → Insurance(InsID)`
-
-**Description:**
-This table represents the `Attached` relationship, which establishes a many-to-many association between expenses and their associated contact locations.
-
----
-
-### **Relationship: `Coveres`**
+### **Relationship: `Covers`**
 
 **Attributes:**
 
-* **Primary Key:** `ExID,IID`
+* **Primary Key:** `InsID,IID`
 * **Foreign Keys:**
 
   * `InsID → Insurance(InsID)`
   * `IID → Patient(IID)`
+* **Other Attributes:**
+  * `InsID (INT, NOT NULL)`
+  * `IID (INT, NOT NULL)`
 
 **Description:**
 This table represents the `Covers` relationship, which establishes a many-to-many association between patients and their insurance coverage.
