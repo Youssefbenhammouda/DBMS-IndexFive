@@ -189,3 +189,17 @@ This table represents the `Technical` entity, which represents non-caregiving ro
 
 **Description:**
 This table represents the `Department` entity, which captures informations about the different departments within the hospital, including: Name and Specialty,uniquely identified by the `DEP_ID` primary key.
+
+### **Entity: `Hospital`**
+
+**Attributes:**
+* **Primary Key:** `HID`
+* **Other Attributes:**
+
+  * `HID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `Name (VARCHAR(100), NOT NULL)`
+  * `City (VARCHAR(100), NOT NULL)`
+  * `Region (VARCHAR(100), NOT NULL)`
+
+**Description:**
+This table represents the `Hospital` entity, which captures each hospital's name, city and region, uniquely identified by the the `HID` primary key.
