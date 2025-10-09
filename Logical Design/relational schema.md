@@ -235,7 +235,7 @@ This table represents the `Clinical_Activity` entity, which captures the common 
 
 ---
 
-### **Entity: `Appoitment`**
+### **Entity: `Appointment`**
 
 **Attributes:**
 
@@ -259,7 +259,7 @@ This table represents the `Clinical_Activity` entity, which captures the common 
 
 
 **Description:**
-This table represents the `Appoitment` entity,including:
+This table represents the `Appointment` entity,including:
 Status,and Reason,uniquely identified by the `CAID` primary key.
 
 ---
