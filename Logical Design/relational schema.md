@@ -71,11 +71,11 @@ This table represents the `Insurance` entity, which stores information about pat
 **Attributes:**
 * **Primary Key:** `ExID`
 * **Foreign Keys:**
-  * `InsID → Insurance(InsID) ON DELETE CASCADE`
+  * `InsID → Insurance(InsID) ON DELETE SET NULL`
 * **Other Attributes:**
   * `ExID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
   * `total (DECIMAL(10,2), NOT NULL)`
-  * `InsID (INT, NOT NULL)`
+  * `InsID (INT)`
 
 **Description:**
 This table represents the `Expense` entity, which captures the financial aspects related to patient care, including the total expenses incurred during medical treatments, uniquely identified by the `ExID` primary key.
@@ -217,8 +217,8 @@ This table represents the `Hospital` entity, which captures each hospital's name
 
 * **Primary Key:** `CAID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID) ON DELETE RECTRICT`
-  * `IID → Patient(IID) ON DELETE RECTRICT`
+  * `STAFF_ID → Staff(STAFF_ID) ON DELETE RESTRICT`
+  * `IID → Patient(IID) ON DELETE RESTRICT`
   * `ExID → Expense(ExID)`
   * `DEP_ID → Department(DEP_ID)`
 * **Other Attributes:**
@@ -249,7 +249,7 @@ This table represents the `Clinical_Activity` entity, which captures the common 
 * **Other Attributes:**
 
   * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Status VARCHAR(10) CHECK(type in ('Scheduled', 'Completed', 'Cancelled') or type is NULL)`
+  * `Status VARCHAR(10) CHECK(Status in ('Scheduled', 'Completed', 'Cancelled') or type is NULL)`
   * `Reason VARCHAR(255) NOT NULL`
 
 **Description:**
@@ -283,7 +283,7 @@ This table represents the `Emergency` entity, including: Triahe_Level and Outcom
   * `CAID → Clinical_Activity(CAID) ON DELETE RESTRICT`
 * **Other Attributes:**
   * `PID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Date_Issued DATE`
+  * `Date_Issued (DATE, NOT NULL) `
   * `CAID (INT, NOT NULL, UNIQUE)`
 
 **Description:**
