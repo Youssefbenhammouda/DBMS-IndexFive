@@ -289,6 +289,7 @@ This table represents the `Emergency` entity, including: Triahe_Level and Outcom
 **Description:**
 This table represents the `Prescription` entity, including Date when the prescription was issed, uniquely identified by the `PID` primary key.
 
+---
 
 
 ### Entity: `Medication`
@@ -361,6 +362,5 @@ This table represents the `include` relationship, which establishes a many-to-ma
 **Description:**
 This table represents the `work_in` relationship, which captures the assignment of staff members to departments. Each staff member works in at least one department and can work in multiple departments, while each department can have many staff members. The combination of STAFF_ID and DEP_ID uniquely identifies each assignment, reflecting a many-to-many relationship between staff and departments.
 
----
 
 
