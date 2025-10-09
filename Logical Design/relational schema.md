@@ -302,6 +302,8 @@ This table represents the `Prescription` entity, including Date when the prescri
   * `Strength (VARCHAR(100), NOT NULL)`
   * `Active_Ingredient (VARCHAR(100), NOT NULL)`
   * `Manufacturer (VARCHAR(100), NOT NULL)`
+
+
 **Description:**
 This table represents the `Medication` entity. Each record corresponds to a specific drug, uniquely identified by DrugID, and includes details such as its class, form, strength, active ingredient, and manufacturer.
 
@@ -341,6 +343,23 @@ This table represents the `Stock` relationship, which establishes a many-to-many
 
 **Description:**
 This table represents the `include` relationship, which establishes a many-to-many association between Medication and their Prescription.
+
+---
+
+
+
+### **Relationship: `work_in`**
+
+**Attributes:**
+
+* **Primary Key:** `STAFF_ID,DEP_ID`
+* **Foreign Keys:**
+
+  * `STAFF_ID → Staff(STAFF_ID) ON DELETE CASCADE`
+  * `DEP_ID → Department(DEP_ID) ON DELETE CASCADE`
+
+**Description:**
+This table represents the `work_in` relationship, which captures the assignment of staff members to departments. Each staff member works in at least one department and can work in multiple departments, while each department can have many staff members. The combination of STAFF_ID and DEP_ID uniquely identifies each assignment, reflecting a many-to-many relationship between staff and departments.
 
 ---
 
