@@ -125,11 +125,11 @@ This table represents the `Staff` entity, which captures the common informations
 **Attributes:**
 
 * **Primary Key:** `STAFF_ID`
+* **Foreign Keys:**
+  * `STAFF_ID → Staff(STAFF_ID)`
 * **Other Attributes:**
 
-  * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Name (VARCHAR(100), NOT NULL)`
-  * `Status (VARCHAR(20), NOT NULL)`
+  * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT, PRIMARY KEY)`
   * `License_Number (INT, NOT NULL)`
   * `Specialty (VARCHAR(100), NOT NULL)`
 
@@ -144,11 +144,10 @@ Name,Status,License_Number and Specialty,uniquely identified by the `STAFF_ID` p
 **Attributes:**
 
 * **Primary Key:** `STAFF_ID`
+* **Foreign Keys:**
+  * `STAFF_ID → Staff(STAFF_ID)`
 * **Other Attributes:**
-
   * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Name (VARCHAR(100), NOT NULL)`
-  * `Status (VARCHAR(20), NOT NULL)`
   * `Grade (VARCHAR(50), NOT NULL)`
   * `Ward (VARCHAR(100), NOT NULL)`
 
@@ -162,11 +161,10 @@ This table represents the `Caregiving` entity, which represents specialty and li
 **Attributes:**
 
 * **Primary Key:** `STAFF_ID`
+* **Foreign Keys:**
+  * `STAFF_ID → Staff(STAFF_ID)`
 * **Other Attributes:**
-
   * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Name (VARCHAR(100), NOT NULL)`
-  * `Status (VARCHAR(20), NOT NULL)`
   * `Modality (VARCHAR(100), NOT NULL)`
   * `Certifications (VARCHAR(100), NOT NULL)`
 
