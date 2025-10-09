@@ -30,7 +30,7 @@ This table represents the `Patient` entity, which stores essential informations 
   * `city (VARCHAR(100), NOT NULL)`
   * `province (VARCHAR(100), NOT NULL)`
   * `Street (VARCHAR(500), NOT NULL)`
-  * `number (VARCHAR(10), NOT NULL)`
+  * `Number (VARCHAR(10), NOT NULL)`
   * `postal_code (VARCHAR(10), NOT NULL)`
   * `Phone (VARCHAR(20))`
 
@@ -258,6 +258,9 @@ This table represents the `Clinical_Activity` entity, which captures the common 
   * `DEP_ID → Department(DEP_ID)`
   * `Time TIME`
   * `Date DATE`
+  * `Status VARCHAR(10) CHECK(type in ('Scheduled', 'Completed', 'Cancelled') or type is NULL)`
+  * `Reason VARCHAR(255) NOT NULL`
+
 
 **Description:**
 This table represents the `Appoitment` entity,including:
@@ -284,6 +287,8 @@ Status,and Reason,uniquely identified by the `CAID` primary key.
   * `DEP_ID → Department(DEP_ID)`
   * `Time TIME`
   * `Date DATE`
+  * `Triage_Level VARCHAR(100) NOT NULL`
+  * `Outcome VARCHAR(100) NOT NULL`
 
 **Description:**
 This table represents the `Emergency` entity, including: Triahe_Level and Outcome,uniquely identified by the `CAID` primary key,because it is a sub-type of Clinical Activity(i.e inherits attributes from  Clinical Activity).
@@ -294,6 +299,8 @@ This table represents the `Emergency` entity, including: Triahe_Level and Outcom
 ### Entity: `Prescription`
 **Attributes:**
 * **Primary Key:** `PID`
+* **Foreign Keys:**
+  * `CAID → Clinical_Activity(CAID)`
 * **Other Attributes:**
   * `PID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
   * `Date_Issued DATE`
@@ -313,8 +320,8 @@ This table represents the `Prescription` entity, including Date when the prescri
   * `DrugID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
   * `Class (VARCHAR(100), NOT NULL)`
   * `Name (VARCHAR(100), NOT NULL)`
-  * `Form (VARCHAR(50), NOT NULL)`
-  * `Strength (VARCHAR(50), NOT NULL)`
+  * `Form (VARCHAR(100), NOT NULL)`
+  * `Strength (VARCHAR(100), NOT NULL)`
   * `Active_Ingredient (VARCHAR(100), NOT NULL)`
   * `Manufacturer (VARCHAR(100), NOT NULL)`
 **Description:**
