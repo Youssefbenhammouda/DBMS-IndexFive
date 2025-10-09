@@ -7,9 +7,9 @@
 * **Other Attributes:**
 
   * `IID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `CIN (VARCHAR(100), NOT NULL)`
+  * `CIN (VARCHAR(100), NOT NULL, UNIQUE)`
   * `Name (VARCHAR(100), NOT NULL)`
-  * `Sex (VARCHAR(500), NOT NULL)`
+  * `Sex (VARCHAR(1), NOT NULL, CHECK (Sex in ('M', 'F')))`
   * `Birth (DATE, NOT NULL)`
   * `Blood_group (VARCHAR(10), NOT NULL)`
   * `Phone (VARCHAR(20))`
@@ -35,7 +35,7 @@ This table represents the `Patient` entity, which stores essential informations 
   * `Phone (VARCHAR(20))`
 
 **Description:**
-This table represents the `Insurance` entity, which stores information about patient insurance coverage, including the insurance type (such as CNOPS, CNSS, RAMED, or private), uniquely identified by the `ExID` primary key.
+This table represents the `Contact_Location` entity, which stores information about the contact locations of patients, including city, province, street, number, postal code, and phone number, uniquely identified by the `CLID` primary key.
 
 ---
 
@@ -44,8 +44,8 @@ This table represents the `Insurance` entity, which stores information about pat
 **Attributes:**  
 - **Primary Key:** `CLID,IID`  
 - **Foreign Keys:**  
-  - `CLID → Contact_Location(CLID)`
-  - `IID → Patient(IID)`
+  - `CLID → Contact_Location(CLID) ON DELETE CASCADE`
+  - `IID → Patient(IID) ON DELETE CASCADE`
 
 
 **Description:**  
@@ -64,7 +64,7 @@ This table represents the `Have` relationship, which establishes a many-to-many 
   * `ins_type (VARCHAR(10), CHECK (ins_type in ('CNOPS', 'CNSS', 'RAMED', 'private') OR ins_type IS NULL)`
 
 **Description:**
-This table represents the `Insurance` entity, which stores information about patient insurance coverage, including the insurance type (such as CNOPS, CNSS, RAMED, or private), uniquely identified by the `ExID` primary key.
+This table represents the `Insurance` entity, which stores information about patient insurance coverage, including the insurance type (such as CNOPS, CNSS, RAMED, or private or none), uniquely identified by the `ExID` primary key.
 
 ---
 
@@ -72,10 +72,10 @@ This table represents the `Insurance` entity, which stores information about pat
 **Attributes:**
 * **Primary Key:** `ExID`
 * **Foreign Keys:**
-  * `InsID → Insurance(InsID)`
+  * `InsID → Insurance(InsID) ON DELETE CASCADE`
 * **Other Attributes:**
   * `ExID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `total (Double, NOT NULL)`
+  * `total (DECIMAL(10,2), NOT NULL)`
   * `InsID (INT, NOT NULL)`
 
 **Description:**
@@ -90,8 +90,8 @@ This table represents the `Expense` entity, which captures the financial aspects
 * **Primary Key:** `InsID,IID`
 * **Foreign Keys:**
 
-  * `InsID → Insurance(InsID)`
-  * `IID → Patient(IID)`
+  * `InsID → Insurance(InsID) ON DELETE CASCADE`
+  * `IID → Patient(IID) ON DELETE CASCADE`
 * **Other Attributes:**
   * `InsID (INT, NOT NULL)`
   * `IID (INT, NOT NULL)`
@@ -126,10 +126,10 @@ This table represents the `Staff` entity, which captures the common informations
 
 * **Primary Key:** `STAFF_ID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID)`
+  * `STAFF_ID → Staff(STAFF_ID) ON DELETE CASCADE`
 * **Other Attributes:**
 
-  * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT, PRIMARY KEY)`
+  * `STAFF_ID (INT, NOT NULL, PRIMARY KEY)`
   * `License_Number (INT, NOT NULL)`
   * `Specialty (VARCHAR(100), NOT NULL)`
 
@@ -145,9 +145,9 @@ Name,Status,License_Number and Specialty,uniquely identified by the `STAFF_ID` p
 
 * **Primary Key:** `STAFF_ID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID)`
+  * `STAFF_ID → Staff(STAFF_ID) ON DELETE CASCADE`
 * **Other Attributes:**
-  * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `STAFF_ID (INT, NOT NULL,PRIMARY KEY)`
   * `Grade (VARCHAR(50), NOT NULL)`
   * `Ward (VARCHAR(100), NOT NULL)`
 
@@ -162,9 +162,9 @@ This table represents the `Caregiving` entity, which represents specialty and li
 
 * **Primary Key:** `STAFF_ID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID)`
+  * `STAFF_ID → Staff(STAFF_ID) ON DELETE CASCADE`
 * **Other Attributes:**
-  * `STAFF_ID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `STAFF_ID (INT, NOT NULL,PRIMARY KEY)`
   * `Modality (VARCHAR(100), NOT NULL)`
   * `Certifications (VARCHAR(100), NOT NULL)`
 
@@ -188,6 +188,8 @@ This table represents the `Technical` entity, which represents non-caregiving ro
 This table represents the `Department` entity, which captures informations about the different departments within the hospital, including: Name and Specialty,uniquely identified by the `DEP_ID` primary key.
 
 ---
+
+
 
 ### **Entity: `Hospital`**
 
@@ -213,22 +215,23 @@ This table represents the `Hospital` entity, which captures each hospital's name
 
 * **Primary Key:** `CAID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID)`
-  *  `IID → Patient(IID)`
+  * `STAFF_ID → Staff(STAFF_ID) ON DELETE RECTRICT`
+  * `IID → Patient(IID) ON DELETE RECTRICT`
   * `ExID → Expense(ExID)`
   * `DEP_ID → Department(DEP_ID)`
 * **Other Attributes:**
 
   * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `STAFF_ID → Staff(STAFF_ID)`
-  *  `IID → Patient(IID)`
-  * `ExID → Expense(ExID)`
-  * `DEP_ID → Department(DEP_ID)`
-  * `Time TIME`
-  * `Date DATE`
+  * `occurred_at DATETIME NOT NULL`
+  * `IID (INT, NOT NULL)`
+  * `ExID (INT, UNIQUE, NOT NULL)`
+  * `DEP_ID (INT, NOT NULL)`
+  * `STAFF_ID (INT, NOT NULL)`
+  
 
 **Description:**
-This table represents the `Clinical_Activity` entity, which captures the common informations shared by every Clinical Activity, including: Date and Time,uniquely identified by the `CAID` primary key.
+This table represents the `Clinical_Activity` entity, which captures the common informations shared by every Clinical Activity, including: occurred_at, uniquely identified by the `CAID` primary key.
+
 
 ### **`Appoitment and Emergency entities are a sub-type of Clinical Activity(i.e inherits attributes from Clinical Activity)`**
 
@@ -240,22 +243,12 @@ This table represents the `Clinical_Activity` entity, which captures the common 
 
 * **Primary Key:** `CAID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID)`
-  *  `IID → Patient(IID)`
-  * `EcID → Expense(ExID)`
-  * `DEP_ID → Department(DEP_ID)`
+  * `CAID → Clinical_Activity(CAID) ON DELETE CASCADE`
 * **Other Attributes:**
 
   * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `STAFF_ID → Staff(STAFF_ID)`
-  *  `IID → Patient(IID)`
-  * `ExID → Expense(ExID)`
-  * `DEP_ID → Department(DEP_ID)`
-  * `Time TIME`
-  * `Date DATE`
   * `Status VARCHAR(10) CHECK(type in ('Scheduled', 'Completed', 'Cancelled') or type is NULL)`
   * `Reason VARCHAR(255) NOT NULL`
-
 
 **Description:**
 This table represents the `Appoitment` entity,including:
@@ -269,19 +262,9 @@ Status,and Reason,uniquely identified by the `CAID` primary key.
 
 * **Primary Key:** `CAID`
 * **Foreign Keys:**
-  * `STAFF_ID → Staff(STAFF_ID)`
-  *  `IID → Patient(IID)`
-  * `EcID → Expense(ExID)`
-  * `DEP_ID → Department(DEP_ID)`
+  * `CAID → Clinical_Activity(CAID) ON DELETE CASCADE`
 * **Other Attributes:**
-
   * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `STAFF_ID → Staff(STAFF_ID)`
-  *  `IID → Patient(IID)`
-  * `ExID → Expense(ExID)`
-  * `DEP_ID → Department(DEP_ID)`
-  * `Time TIME`
-  * `Date DATE`
   * `Triage_Level VARCHAR(100) NOT NULL`
   * `Outcome VARCHAR(100) NOT NULL`
 
@@ -295,16 +278,14 @@ This table represents the `Emergency` entity, including: Triahe_Level and Outcom
 **Attributes:**
 * **Primary Key:** `PID`
 * **Foreign Keys:**
-  * `CAID → Clinical_Activity(CAID)`
+  * `CAID → Clinical_Activity(CAID) ON DELETE RESTRICT`
 * **Other Attributes:**
   * `PID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
   * `Date_Issued DATE`
+  * `CAID (INT, NOT NULL, UNIQUE)`
 
 **Description:**
 This table represents the `Prescription` entity, including Date when the prescription was issed, uniquely identified by the `PID` primary key.
-
----
-
 
 
 
@@ -331,8 +312,8 @@ This table represents the `Medication` entity. Each record corresponds to a spec
 * **Primary Key:** `HID,DrugID`
 * **Foreign Keys:**
 
-  * `HID → Hospital(HID)`
-  * `DrugID → Medication(DrugID)`
+  * `HID → Hospital(HID) ON DELETE CASCADE`
+  * `DrugID → Medication(DrugID) ON DELETE CASCADE`
 * **Other Attributes:**
   * `DrugID (INT, NOT NULL)`
   * `HID (INT, NOT NULL)`
@@ -354,27 +335,12 @@ This table represents the `Stock` relationship, which establishes a many-to-many
 * **Primary Key:** `PID,DrugID`
 * **Foreign Keys:**
 
-  * `PID → Prescription(PID)`
-  * `DrugID → Medication(DrugID)`
+  * `PID → Prescription(PID) ON DELETE CASCADE`
+  * `DrugID → Medication(DrugID) ON DELETE CASCADE`
 
 **Description:**
 This table represents the `include` relationship, which establishes a many-to-many association between Medication and their Prescription.
 
 ---
 
-### **Relationship: `work_in`**
-
-**Attributes:**
-
-* **Primary Key:** `STAFF_ID,DEP_ID`
-* **Foreign Keys:**
-
-  * `STAFF_ID → Staff(STAFF_ID)`
-  * `DEP_ID → Department(DEP_ID)`
-
-**Description:**
-This table represents the `work_in` relationship, which captures the assignment of staff members to departments. Each staff member works in at least one department and can work in multiple departments, while each department can have many staff members. The combination of STAFF_ID and DEP_ID uniquely identifies each assignment, reflecting a many-to-many relationship between staff and departments.
-
-
----
 
