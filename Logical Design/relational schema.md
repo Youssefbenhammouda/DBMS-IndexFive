@@ -39,7 +39,6 @@ This table represents the `Insurance` entity, which stores information about pat
 
 ---
 
-
 ### **Relationship: `Have`**
 **Attributes:**  
 - **Primary Key:** `CLID,IID`  
@@ -68,7 +67,7 @@ This table represents the `Insurance` entity, which stores information about pat
 
 ---
 
-### Entity: `Expense`
+### **Entity: `Expense`**
 **Attributes:**
 * **Primary Key:** `ExID`
 * **Foreign Keys:**
@@ -307,9 +306,6 @@ This table represents the `Prescription` entity, including Date when the prescri
 
 ---
 
-
-
-
 ### Entity: `Medication`
 **Attributes:**
 * **Primary Key:** `DrugID`
@@ -323,8 +319,8 @@ This table represents the `Prescription` entity, including Date when the prescri
   * `Manufacturer (VARCHAR(100), NOT NULL)`
 **Description:**
 This table represents the `Medication` entity. Each record corresponds to a specific drug, uniquely identified by DrugID, and includes details such as its class, form, strength, active ingredient, and manufacturer.
----
 
+---
 
 ### **Relationship: `Stock`**
 
@@ -347,7 +343,6 @@ This table represents the `Medication` entity. Each record corresponds to a spec
 This table represents the `Stock` relationship, which establishes a many-to-many association between Hospital and their hospital.
 
 ---
-
 
 ### **Relationship: `include`**
 
@@ -378,5 +373,4 @@ This table represents the `include` relationship, which establishes a many-to-ma
 This table represents the `work_in` relationship, which captures the assignment of staff members to departments. Each staff member works in at least one department and can work in multiple departments, while each department can have many staff members. The combination of STAFF_ID and DEP_ID uniquely identifies each assignment, reflecting a many-to-many relationship between staff and departments.
 
 
----
-
+--- 
