@@ -177,11 +177,14 @@ This table represents the `Technical` entity, which represents non-caregiving ro
 **Attributes:**
 
 * **Primary Key:** `DEP_ID`
+* **Foreign Keys:**
+  * `HID → Hospital(HID) ON DELETE CASCADE`
 * **Other Attributes:**
 
   * `DEP_ID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
   * `Name (VARCHAR(100), NOT NULL)`
   * `Specialty (VARCHAR(100), NOT NULL)`
+  * `HID (INT, NOT NULL)`
 
 **Description:**
 This table represents the `Department` entity, which captures informations about the different departments within the hospital, including: Name and Specialty,uniquely identified by the `DEP_ID` primary key.
