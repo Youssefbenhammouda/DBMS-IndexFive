@@ -115,11 +115,10 @@ This table represents the `Covers` relationship, which establishes a many-to-man
 **Description:**
 This table represents the `Staff` entity, which captures the common informations shared by every Staff member, including: Name and Status,uniquely identified by the `STAFF_ID` primary key.
 
-
+---
 
 ### **`Practioner,Caregiving and Technical entities are a sub-type of Staff(i.e inherits attributes from Staff)`**
 
----
 
 ### **Entity: `Practioner`**
 
