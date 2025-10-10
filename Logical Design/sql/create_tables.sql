@@ -133,7 +133,7 @@ CREATE TABLE Medication (
   Form VARCHAR(100) NOT NULL,
   Strength VARCHAR(100) NOT NULL,
   Active_Ingredient VARCHAR(100) NOT NULL,
-  Manufacturer VARCHAR(100) NOT NULL,
+  Manufacturer VARCHAR(100) NOT NULL
  );
   
   
