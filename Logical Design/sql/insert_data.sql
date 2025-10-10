@@ -1,6 +1,6 @@
 INSERT INTO Patient (CIN, Name, Sex, Birth, Blood_group, Phone) 
 VALUES 
-('BE123456', 'Yahya BELEFQUIH', 'M', '2006-08-15', 'O+', '+212 624-261540'),
+('E727709', 'Yahia BELEFQUIH', 'M', '2007-04-08', 'O+', '+212 624-261540'),
 ('KA789012', 'Youssef Benani', 'M', '1992-11-22', 'A-', '+212-700-987654'),
 ('LE345678', 'Leila El Amrani', 'F', '1985-05-30', 'B+', '+212-600-123456')
 ;
