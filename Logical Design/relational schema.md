@@ -60,7 +60,7 @@ This table represents the `Have` relationship, which establishes a many-to-many 
 * **Other Attributes:**
 
   * `InsID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `ins_type (VARCHAR(10), CHECK (ins_type in ('CNOPS', 'CNSS', 'RAMED', 'private') OR ins_type IS NULL)`
+  * `Ins_type (VARCHAR(10), CHECK (Ins_type in ('CNOPS', 'CNSS', 'RAMED', 'private') OR Ins_type IS NULL)`
 
 **Description:**
 This table represents the `Insurance` entity, which stores information about patient insurance coverage, including the insurance type (such as CNOPS, CNSS, RAMED, or private or none), uniquely identified by the `ExID` primary key.
@@ -74,7 +74,7 @@ This table represents the `Insurance` entity, which stores information about pat
   * `InsID → Insurance(InsID) ON DELETE SET NULL`
 * **Other Attributes:**
   * `ExID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `total (DECIMAL(10,2), NOT NULL)`
+  * `Total (DECIMAL(10,2), NOT NULL)`
   * `InsID (INT)`
 
 **Description:**
@@ -172,6 +172,24 @@ This table represents the `Technical` entity, which represents non-caregiving ro
 
 ---
 
+
+### **Entity: `Hospital`**
+
+**Attributes:**
+* **Primary Key:** `HID`
+* **Other Attributes:**
+
+  * `HID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
+  * `Name (VARCHAR(100), NOT NULL)`
+  * `City (VARCHAR(100), NOT NULL)`
+  * `Region (VARCHAR(100), NOT NULL)`
+
+**Description:**
+This table represents the `Hospital` entity, which captures each hospital's name, city and region, uniquely identified by the the `HID` primary key.
+
+---
+
+
 ### **Entity: `Department`**
 
 **Attributes:**
@@ -190,25 +208,6 @@ This table represents the `Technical` entity, which represents non-caregiving ro
 This table represents the `Department` entity, which captures informations about the different departments within the hospital, including: Name and Specialty,uniquely identified by the `DEP_ID` primary key.
 
 ---
-
-
-
-### **Entity: `Hospital`**
-
-**Attributes:**
-* **Primary Key:** `HID`
-* **Other Attributes:**
-
-  * `HID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Name (VARCHAR(100), NOT NULL)`
-  * `City (VARCHAR(100), NOT NULL)`
-  * `Region (VARCHAR(100), NOT NULL)`
-
-**Description:**
-This table represents the `Hospital` entity, which captures each hospital's name, city and region, uniquely identified by the the `HID` primary key.
-
----
-
 
 
 ### **Entity: `Clinical_Activity`**
@@ -249,7 +248,7 @@ This table represents the `Clinical_Activity` entity, which captures the common 
 * **Other Attributes:**
 
   * `CAID (INT, NOT NULL, AUTO_INCREMENT,PRIMARY KEY)`
-  * `Status VARCHAR(10) CHECK(Status in ('Scheduled', 'Completed', 'Cancelled') or type is NULL)`
+  * `Status VARCHAR(10) CHECK(Status in ('Scheduled', 'Completed', 'Cancelled') or Status is NULL)`
   * `Reason VARCHAR(255) NOT NULL`
 
 **Description:**
