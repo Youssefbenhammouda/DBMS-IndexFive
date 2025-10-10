@@ -1,6 +1,10 @@
-select p.Name,p.CIN,p.Birth,p.Blood_group,p.Sex,p.Phone, a.Reason , a.Status,h.Name, h.City,d.Name,d.Specialty from Patient p
-join `Clinical_Activity` c ON p.IID = c.IID
-join Appointment a ON c.CAID = a.CAID
-join `Department` d ON c.DEP_ID =  d.DEP_ID
-join `Hospital` h ON d.HID = h.HID
-where h.City = 'benguerir' AND a.Status = 'Scheduled';
+SELECT * FROM Patient WHERE IID IN (
+    SELECT IID FROM Clinical_Activity WHERE CAID IN (
+        SELECT CAID FROM Appointment WHERE Status = 'Scheduled'
+    )
+    AND DEP_ID IN (
+        SELECT DEP_ID FROM Department WHERE HID IN (
+            SELECT HID FROM Hospital WHERE City = 'BenGuerir'
+        )
+    )
+);
