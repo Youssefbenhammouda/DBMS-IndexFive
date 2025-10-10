@@ -340,7 +340,8 @@ This table represents the `Stock` relationship, which establishes a many-to-many
 
   * `PID → Prescription(PID) ON DELETE CASCADE`
   * `DrugID → Medication(DrugID) ON DELETE CASCADE`
-
+* **Other Attributes:**
+  
 **Description:**
 This table represents the `include` relationship, which establishes a many-to-many association between Medication and their Prescription.
 
