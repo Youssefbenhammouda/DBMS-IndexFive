@@ -1,6 +1,6 @@
 # Relational Algebra
 
-1. We join the related tables to link patients with their clinical activities and staff, then filter for those handled by active staff, and finally list the names of the corresponding patients.
+### 1. We join the related tables to link patients with their clinical activities and staff, then filter for those handled by active staff, and finally list the names of the corresponding patients.
 
 
 $$
@@ -15,7 +15,7 @@ $$
 
 <br>
 
-2. We select all staff who are active and combine them with those linked to at least one prescription through clinical activities.
+### 2. We select all staff who are active and combine them with those linked to at least one prescription through clinical activities.
 
 $$
 \pi_{\text{ STAFF ID}}\big(\sigma_{\text{ Status=active}}(Staff)\big)
@@ -28,7 +28,7 @@ $$
 
 <br>
 
-3. We select all hospitals located in Benguerir and combine them with those that have at least one department specializing in Cardiology.
+### 3. We select all hospitals located in Benguerir and combine them with those that have at least one department specializing in Cardiology.
 
 $$
 \pi_{\text{HID}}
@@ -46,7 +46,7 @@ $$
 <br>
 
 
-4. We select $HID$ of Hospitals that have Cardiology Department and we do the same for Hospitals that have Pedialtric Department and we do interection of both sets.
+### 4. We select $HID$ of Hospitals that have Cardiology Department and we do the same for Hospitals that have Pedialtric Department and we do interection of both sets.
 
 $$
 \pi_{\mathrm{HID}}
@@ -63,7 +63,7 @@ $$
 <br>
 
 
-5. The natural join give us a set of all staff members that work in any department of Hospital with $HID =1$ and then we divide Staff by thi set to get all staff members that work in every department.
+### 5. The natural join give us a set of all staff members that work in any department of Hospital with $HID =1$ and then we divide Staff by thi set to get all staff members that work in every department.
 
 $$
 \mathrm{Staff} \div 
@@ -77,7 +77,7 @@ $$
 <br>
 
 
-6. Since Clinical Activity link staff and department we just select dept_id=2 and the result will divide staff 
+### 6. Since Clinical Activity link staff and department we just select dept_id=2 and the result will divide staff 
 
 $$
 \mathrm{Staff} \div 
@@ -86,6 +86,7 @@ $$
 \Big)
 $$
 
+### Find Staff IDs of staff who have issued more than one prescription.
 <br>
 
 ### 13. Find departments whose average number of clinical activities is below the global departmental average.
