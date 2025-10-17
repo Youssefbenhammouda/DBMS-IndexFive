@@ -64,7 +64,7 @@ $$
 \Big(
   \sigma_{\mathrm{HID} = 1}(\mathrm{Department})
   \bowtie
-  \mathrm{work in}
+  \text{work in}
 \Big)
 $$
 
@@ -76,7 +76,7 @@ $$
 $$
 \mathrm{Staff} \div 
 \Big(
-  \sigma_{\mathrm{dept id} = 2}(\mathrm{Clinical Activity})
+  \sigma_{\text{dept id} = 2}(\text{Clinical Activity})
 \Big)
 $$
 
