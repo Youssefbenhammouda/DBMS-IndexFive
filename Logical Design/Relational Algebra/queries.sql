@@ -20,7 +20,6 @@ JOIN Prescription PR
     ON CA.CAID = PR.CAID;
 
 
-
 SELECT H.HID
 FROM Hospital H
 WHERE H.City = 'Benguerir'
@@ -30,6 +29,79 @@ UNION
 SELECT D.HID
 FROM Department D
 WHERE D.Specialty = 'Cardiology';
+
+
+--- I use here the definition of intersection as the set difference of the set difference because intersection is not a basic operation
+
+
+SELECT HID
+FROM Department
+WHERE Specialty = 'Cardiology'
+EXCEPT
+(
+    SELECT HID
+    FROM Department
+    WHERE Specialty = 'Cardiology'
+    EXCEPT
+    SELECT HID
+    FROM Department
+    WHERE Specialty = 'Pediatrics'
+);
+
+
+--- I use the definition of division seen in the slides
+
+WITH
+A AS (
+    SELECT Staff_ID, Dep_ID
+    FROM work_in
+),
+B AS (
+    SELECT Dep_ID
+    FROM Department
+    WHERE HID = 1
+)
+SELECT DISTINCT a.Staff_ID
+FROM A a
+WHERE a.Staff_ID NOT IN (
+    SELECT DISTINCT a1.Staff_ID
+    FROM (SELECT DISTINCT Staff_ID FROM A) a1
+    CROSS JOIN B
+    WHERE (a1.Staff_ID, B.Dep_ID) NOT IN (
+        SELECT Staff_ID, Dep_ID
+        FROM A
+    )
+);
+
+
+--- I use the definition of division seen in the slides
+
+
+WITH
+A AS (
+    SELECT Staff_ID, CAID
+    FROM Clinical_Activity
+),
+B AS (
+    SELECT DISTINCT CAID
+    FROM Clinical_Activity
+    WHERE Dep_ID = 2
+)
+SELECT DISTINCT a.Staff_ID
+FROM A a
+WHERE a.Staff_ID NOT IN (
+    SELECT DISTINCT a1.Staff_ID
+    FROM (SELECT DISTINCT Staff_ID FROM A) a1
+    CROSS JOIN B
+    WHERE (a1.Staff_ID, B.CAID) NOT IN (
+        SELECT Staff_ID, CAID
+        FROM A
+    )
+);
+
+
+
+
 
 
 --- 13. Find departments whose average number of clinical activities is below the global departmental average.
