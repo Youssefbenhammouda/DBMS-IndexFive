@@ -81,3 +81,57 @@ $$
 $$
 
 <br>
+
+### 13. Find departments whose average number of clinical activities is below the global departmental average.
+
+```math
+\begin{alignedat}{2}
+& \rho(H, \; \pi_{DEP\_ID,\; CAID} (\rho(4\rightarrow depid2,\; ClinicalActivity \; \bowtie \; Department))) \\
+& \quad\\[6pt]
+& \rho(M(2 \rightarrow cnt),\;  \pi_{DEP\_ID,\; count(CAID)}(\; GROUP\; BY\; DEP\_ID \;(H)\;)\big) \\
+& \quad\\[6pt]
+& \rho(AVG(1 \rightarrow avg),\; \pi_{AVG(cnt)}(M)) \\
+& \quad\\[6pt]
+& \rho(DEPS,\; \pi_{DEP\_ID}\big(\sigma_{M.cnt < AVG.avg}(M \times AVG)\big)) \\
+& \quad\\[6pt]
+& \pi_{DEP\_ID,\; Name,\; Specialty}(DEPS \; \bowtie \; Department)
+\end{alignedat}
+```
+
+
+
+### 14. For each staff member, return the patient who has the greatest number of completed appointments with that staff member.
+
+```math
+\begin{alignedat}{2}
+& \rho(A, (\sigma_{status='Completed'} (ClinicalActivity \; \bowtie \; Appointment))) \\
+\\[6pt]
+& \rho(B(3 \rightarrow cnt), (\pi_{STAFF\_ID,\; IID,\; COUNT(*)} (GROUP\; BY\; STAFF\_ID,\; IID\; (A)))) \\
+\\[6pt]
+& \rho(C(2 \rightarrow mx), (\pi_{STAFF\_ID,\; MAX(cnt)} (GROUP\; BY\; STAFF\_ID\; (B)))) \\
+\\[6pt]
+& \rho(D, ((C) \; \bowtie_{C.mx = B.cnt \; \wedge \; C.STAFF\_ID = B.STAFF\_ID} (B))) \\
+\\[6pt]
+& \rho(E(3 \rightarrow PatientName), (Patient) \; \bowtie_{Patient.IID = D.IID} (D)) \\
+\\[6pt]
+& \pi_{STAFF\_ID,\; FullName,\; IID,\; PatientName} (E \; \bowtie \; Staff)
+\end{alignedat}
+```
+
+
+
+### 15. List patients who had at least 3 emergency admissions during the year 2024
+
+```math
+\begin{aligned}
+& \rho(A, \; \sigma_{Year(Date) = 2024} ((ClinicalActivity) \; \bowtie_{CAID} \; (Emergency))) \\
+\\[6pt]
+& \rho(B(2 \rightarrow cnt), \; \pi_{IID,\; count(*)} (GROUP\; BY\; IID\; (A))) \\
+\\[6pt]
+& \rho(C, \; \sigma_{cnt \geq 3} (B)) \\
+\\[6pt]
+& \rho(D, \; C \; \bowtie_{IID} \; (Patient)) \\
+\\[6pt]
+& \pi_{IID,\; CIN,\; FullName,\; Birth} (D)
+\end{aligned}
+```
