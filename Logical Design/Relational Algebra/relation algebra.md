@@ -7,7 +7,7 @@ $$
 \pi_{\text{ Name}}
 \Big(
     (\sigma_{\text{ Status = active}}(Staff)
-    \bowtie_{\text{ STAFF\_ID}} Clinical Activity)
+    \bowtie_{\text{ STAFF\\_ID}} Clinical Activity)
     \bowtie_{\text{ IID}} Patient
 \Big)
 $$
@@ -20,7 +20,7 @@ $$
 $$
 \pi_{\text{ STAFF ID}}\big(\sigma_{\text{ Status=active}}(Staff)\big)
 \;\cup\;
-\pi_{\text{ STAFF\_ID}}\big(
+\pi_{\text{ STAFF\\_ID}}\big(
     Clinical Activity \bowtie_{\text{ CAID}} Prescription
 \big)
 $$
@@ -29,13 +29,19 @@ $$
 <br>
 
 3. We select all hospitals located in Benguerir and combine them with those that have at least one department specializing in Cardiology.
+
 $$
-\pi_{\text{ HID}}\big(\sigma_{\text{ City}='Benguerir'}(Hospital)\big)
+\pi_{\text{HID}}
+\big(
+    \sigma_{\text{City} = 'Benguerir'}(\text{Hospital})
+\big)
 \;\cup\;
-\pi_{\text{ HID}}\big(
-    \sigma_{\text{ Specialty}='Cardiology'}(Department)
+\pi_{\text{HID}}
+\big(
+    \sigma_{\text{Specialty} = 'Cardiology'}(\text{Department})
 \big)
 $$
+
 
 <br>
 
