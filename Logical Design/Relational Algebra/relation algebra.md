@@ -1,3 +1,5 @@
+# Relational Algebra
+
 1. We join the related tables to link patients with their clinical activities and staff, then filter for those handled by active staff, and finally list the names of the corresponding patients.
 
 
@@ -26,8 +28,7 @@ $$
 
 <br>
 
-3. We select all hospitals located in Benguerir and combine them with those that have at least one department specializing in Cardiology.
-
+3. Since Clinical Activity link staff and department we just select $dept_id=2$ and the result will divide Staff.
 $$
 \pi_{\text{ HID}}\big(\sigma_{\text{ City}='Benguerir'}(Hospital)\big)
 \;\cup\;
@@ -35,3 +36,48 @@ $$
     \sigma_{\text{ Specialty}='Cardiology'}(Department)
 \big)
 $$
+
+<br>
+
+
+4. We select $HID$ of Hospitals that have Cardiology Department and we do the same for Hospitals that have Pedialtric Department and we do interection of both sets.
+
+$$
+\pi_{\mathrm{HID}}
+\Big(
+  \sigma_{\mathrm{speciality} = \text{"Cardiology"}}(\mathrm{Department})
+\Big)
+\ \cap \
+\pi_{\mathrm{HID}}
+\Big(
+  \sigma_{\mathrm{speciality} = \text{"Pediatrics"}}(\mathrm{Department})
+\Big)
+$$
+
+<br>
+
+
+5. The natural join give us a set of all staff members that work in any department of Hospital with $HID =1$ and then we divide Staff by thi set to get all staff members that work in every department.
+
+$$
+\mathrm{Staff} \div 
+\Big(
+  \sigma_{\mathrm{HID} = 1}(\mathrm{Department})
+  \bowtie
+  \mathrm{work\_in}
+\Big)
+$$
+
+<br>
+
+
+6. The natural join give us a set of all staff members that work in any department of Hospital with $HID =1$ and then we divide Staff by thi set to get all staff members that work in every department.
+
+$$
+\mathrm{Staff} \div 
+\Big(
+  \sigma_{\mathrm{dept\_id} = 2}(\mathrm{Clinical\_Activity})
+\Big)
+$$
+
+<br>
