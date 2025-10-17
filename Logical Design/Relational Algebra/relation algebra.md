@@ -7,8 +7,8 @@ $$
 \pi_{\text{ Name}}
 \Big(
     (\sigma_{\text{ Status = active}}(Staff)
-    \bowtie_{\text{ Staff.STAFF ID = Clinical Activity.STAFF ID}} Clinical Activity)
-    \bowtie_{\text{ Clinical Activity.IID = Patient.IID}} Patient
+    \bowtie_{\text{ STAFF\_ID}} Clinical Activity)
+    \bowtie_{\text{ IID}} Patient
 \Big)
 $$
 
@@ -20,8 +20,8 @@ $$
 $$
 \pi_{\text{ STAFF ID}}\big(\sigma_{\text{ Status=active}}(Staff)\big)
 \;\cup\;
-\pi_{\text{ STAFF ID}}\big(
-    Clinical Activity \bowtie_{\text{ Clinical Activity.CAID = Prescription.CAID}} Prescription
+\pi_{\text{ STAFF\_ID}}\big(
+    Clinical Activity \bowtie_{\text{ CAID}} Prescription
 \big)
 $$
 
