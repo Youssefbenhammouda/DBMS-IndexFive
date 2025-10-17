@@ -71,7 +71,7 @@ $$
 <br>
 
 
-6. The natural join give us a set of all staff members that work in any department of Hospital with $HID =1$ and then we divide Staff by thi set to get all staff members that work in every department.
+6. Since Clinical Activity link staff and department we just select dept_id=2 and the result will divide staff 
 
 $$
 \mathrm{Staff} \div 
