@@ -98,8 +98,48 @@ WHERE a.Staff_ID NOT IN (
         FROM A
     )
 );
+--- 10.Find Staff IDs of staff who have issued more than one prescription.
 
 
+SELECT S.Staff_ID AS SID
+From Staff AS S
+Join ClinicalActivity AS  C ON S.SID=C.SID
+Join Prescription AS P ON C.CAID=P.CAID
+GROUP BY SID
+HAVING COUNT(P.PID)>1;
+
+
+
+
+
+
+--- 11. List IIDs of patients who have scheduled appointments in more than one department.
+
+
+SELECT C.IID AS IID
+From ClinicalActivity AS  C
+Join Appointment AS A ON C.CAID=A.CAID
+WHERE A.Staus="Scheduled"
+GROUP BY IID
+HAVING COUNT(C.DEP_ID)>1;
+
+
+
+
+
+
+--- 12. Find Staff IDs who have no scheduled appointments on the day of the Green March holiday (November 6).
+SELECT S.Staff_ID as SID
+FROM Staff as S
+WHERE S.SID NOT IN (
+    SELECT S1.SID
+    FROM Staff as S1
+    JOIN ClinicalActivity AS C ON S1.SID=C.SID
+    JOIN Appointment AS A ON C.CAID=A.CAID
+    WHERE A.Status='Scheduled'
+         AND A.occured_at>='2025-11-06 00:00:00'
+         AND A.occured_at<'2025-11-07 00:00:00'
+);
 
 
 
