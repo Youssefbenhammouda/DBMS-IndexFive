@@ -9,5 +9,5 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
 
 **FDs:**
 
-$ IID \textrightarrow CIN,Name,Sex,BirthBlood_group,Phone $
+ - IID &rarr; CIN,Name,Sex,BirthBlood_group,Phone
 
