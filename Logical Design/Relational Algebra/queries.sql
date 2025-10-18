@@ -131,14 +131,14 @@ HAVING COUNT(C.DEP_ID)>1;
 --- 12. Find Staff IDs who have no scheduled appointments on the day of the Green March holiday (November 6).
 SELECT S.Staff_ID as SID
 FROM Staff as S
-WHERE S.SID NOT IN (
+WHERE SID NOT IN (
     SELECT S1.SID
     FROM Staff as S1
     JOIN ClinicalActivity AS C ON S1.SID=C.SID
     JOIN Appointment AS A ON C.CAID=A.CAID
     WHERE A.Status='Scheduled'
-         AND A.occured_at>='2025-11-06 00:00:00'
-         AND A.occured_at<'2025-11-07 00:00:00'
+         AND C.occured_at>='2025-11-06 00:00:00'
+         AND C.occured_at<'2025-11-07 00:00:00'
 );
 
 
