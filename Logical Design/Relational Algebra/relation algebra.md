@@ -92,7 +92,7 @@ $$
 \begin{alignedat}{2}
 & \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; (Prescription))
 & \quad\\[6pt]
-& \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; (A))
+& \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A)
 & \quad\\[6pt]
 & \rho(C, \; \text{ GROUP BY }\; Staff\_ID\; \text{COMPUTE}\; \text{count}(PID)\rightarrow count1\;(B)) 
 & \quad\\[6pt]
@@ -118,11 +118,10 @@ $$
 ### 12. Find Staff IDs who have no scheduled appointments on the day of the Green March holiday (November 6).
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; \pi_{Staff\_ID}(\sigma_{\text{Staus}=\text{"Completed"} \wedge \text{occurred\_at} \ge \text{"2025-11-06 00:00:00"} \wedge \text{occurred\_at} < \text{"2025-11-07 00:00:00"}}((ClinicalActivity \bowtie_{ClinicalActivity.CAID=Appointment.CAID} Appointment) \bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}Staff )) )
+& \rho(A, \;\pi_{Staff\_ID}(\sigma_{\text{Staus}=\text{"Completed"} \wedge \text{occurred\_at} \ge \text{"2025-11-06 00:00:00"} \wedge \text{occurred\_at} < \text{"2025-11-07 00:00:00"}}((ClinicalActivity \bowtie_{ClinicalActivity.CAID=Appointment.CAID} Appointment) \bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}Staff )) ) 
 & \quad\\[6pt]
-& \rho(A, \; \pi_{Staff\_ID}(\sigma_{\text{Staus}=\text{"Cancelled"} \wedge \text{occurred\_at} \ge \text{"2025-11-06 00:00:00"} \wedge \text{occurred\_at} < \text{"2025-11-07 00:00:00"}}((ClinicalActivity \bowtie_{ClinicalActivity.CAID=Appointment.CAID} Appointment) \bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}Staff )) )
-& \quad\\[6pt]
-& A \cup B
+&  \rho(Allstaff,\;\pi_{Staff\_ID}(Staff))
+& \text{result}=AllStaff-A
 \end{alignedat}
 ```
 
