@@ -94,7 +94,7 @@ $$
 & \quad\\[6pt]
 & \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A)
 & \quad\\[6pt]
-& \rho(C, \; \gamma_{\text{Staff\_ID};\; \text{count(PID)} \rightarrow {count1}}(B)) 
+& \rho(C, \; \gamma_{\text{Staff\_ID} ;\; \text{count(PID)} \rightarrow {count1}}(B)) 
 & \quad\\[6pt]
 & \rho(D, \;\sigma_{count1>1}\; (C))
 & \quad\\[6pt]
@@ -108,7 +108,7 @@ $$
 \begin{alignedat}{2}
 & \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} \; (\sigma_{\text{Status}=\text{"Scheduled"}}(Appointment)))
 & \quad\\[6pt]
-& \rho(B, \; \text{ GROUP BY }\; IID\;\text{COMPUTE}\; \text{count}(DEP\_ID)\rightarrow count1\;(A))
+& \rho(B, \; \gamma_{\text{IID} ;\; \text{count(DEP\_ID)} \rightarrow {count1}}(A))
 & \quad\\[6pt]
 & \rho(C, \;\sigma_{count1>1}(B))
 & \quad\\[6pt]
