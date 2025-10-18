@@ -121,6 +121,7 @@ $$
 & \rho(A, \;\pi_{Staff\_ID}(\sigma_{\text{Staus}=\text{"Completed"} \wedge \text{occurred\_at} \ge \text{"2025-11-06 00:00:00"} \wedge \text{occurred\_at} < \text{"2025-11-07 00:00:00"}}((ClinicalActivity \bowtie_{ClinicalActivity.CAID=Appointment.CAID} Appointment) \bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}Staff )) ) 
 & \quad\\[6pt]
 &  \rho(Allstaff,\;\pi_{Staff\_ID}(Staff))
+& \quad\\[6pt]
 & \text{result}=AllStaff-A
 \end{alignedat}
 ```
