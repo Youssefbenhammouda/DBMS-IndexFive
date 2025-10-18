@@ -6,6 +6,8 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
 ### Functional Dependencies of MNHS shema:
 ### Patient:
 **Relation:** Patient(IID,CIN,Name,Sex,BirthBlood_group,Phone)
+
 **FDs:**
-IID \textrightarrow CIN,Name,Sex,BirthBlood_group,Phone
+
+$ IID \textrightarrow CIN,Name,Sex,BirthBlood_group,Phone $
 
