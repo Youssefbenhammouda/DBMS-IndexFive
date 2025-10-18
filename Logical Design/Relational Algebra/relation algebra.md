@@ -89,9 +89,9 @@ $$
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; Clinical_Activity \; \bowtie_{Clinical_Activity.CAID=Prescription.CAID} \; Prescription) \\[6pt]
+& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; Prescription) \\[6pt]
 & \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A) \\[6pt]
-& \rho(C, \; \text{GROUP BY } Staff_ID \text{COMPUTE} \text{count}(PID)\rightarrow count1\;B) \\[6pt]
+& \rho(C, \; \text{GROUP BY } Staff_ID \text{COMPUTE} \text{count}(PID)\rightarrow count1\;(B)) \\[6pt]
 & \rho(D, \;\sigma_{count1>1}; C) \\[6pt]
 & \pi_{Staff_ID}(D)
 \end{alignedat}
