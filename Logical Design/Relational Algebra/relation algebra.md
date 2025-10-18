@@ -88,19 +88,19 @@ $$
 
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
 
-$$
-
+```math
+\begin{alignedat}{2}
 & \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; (Prescription))
 & \quad\\[6pt]
 & \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A)
 & \quad\\[6pt]
-& \rho(C, \; \gamma_{ \text{Staff\_ID};\; \text{count}(PID)} \rightarrow {count1}}(B)) 
+& \rho(C, \; \gamma_{\text{Staff\_ID};\; \text{count(PID)} \rightarrow {count1}}(B)) 
 & \quad\\[6pt]
 & \rho(D, \;\sigma_{count1>1}\; (C))
 & \quad\\[6pt]
 & \pi_{Staff\_ID}(D)
-
-$$
+\end{alignedat}
+```
 
 ### 11. List IIDs of patients who have scheduled appointments in more than one department.
 
