@@ -87,18 +87,33 @@ $$
 $$
 
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
+
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; Prescription) \\[6pt]
-& \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A) \\[6pt]
-& \rho(C, \; \text{ GROUP BY }; Staff\_ID \text{COMPUTE} \text{count}(PID)\rightarrow count1\;(B)) \\[6pt]
-& \rho(D, \;\sigma_{count1>1}; C) \\[6pt]
+& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; Prescription)
+& \quad\\[6pt]
+& \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A)
+& \quad\\[6pt]
+& \rho(C, \; \text{ GROUP BY }; Staff\_ID \text{COMPUTE} \text{count}(PID)\rightarrow count1\;(B)) 
+& \quad\\[6pt]
+& \rho(D, \;\sigma_{count1>1}; C) 
+& \quad\\[6pt]
 & \pi_{Staff\_ID}(D)
 \end{alignedat}
 ```
 
+### 11. List IIDs of patients who have scheduled appointments in more than one department.
 
-<br>
+```math
+\begin{alignedat}{2}
+& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} \; \sigma_{Status="Scheduled"};Appointment)
+& \quad\\[6pt]
+& \rho(B, \; \text{ GROUP BY }; IID \text{COMPUTE} \text{count}(DEP\_ID)\rightarrow count1\;(A)) 
+& \quad\\[6pt]
+& \pi_{IID}(B)
+
+### 12. Find Staff IDs who have no scheduled appointments on the day of the Green March holiday (November 6).
+
 
 ### 13. Find departments whose average number of clinical activities is below the global departmental average.
 
