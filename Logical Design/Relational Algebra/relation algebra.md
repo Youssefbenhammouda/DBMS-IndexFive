@@ -90,13 +90,13 @@ $$
 
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; Prescription)
+& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Prescription.CAID} \; (Prescription))
 & \quad\\[6pt]
-& \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A)
+& \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; (A))
 & \quad\\[6pt]
-& \rho(C, \; \text{ GROUP BY }; Staff\_ID\; \text{COMPUTE}\; \text{count}(PID)\rightarrow count1\;(B)) 
+& \rho(C, \; \text{ GROUP BY }\; Staff\_ID\; \text{COMPUTE}\; \text{count}(PID)\rightarrow count1\;(B)) 
 & \quad\\[6pt]
-& \rho(D, \;\sigma_{count1>1}; C) 
+& \rho(D, \;\sigma_{count1>1}\; (C))
 & \quad\\[6pt]
 & \pi_{Staff\_ID}(D)
 \end{alignedat}
@@ -106,11 +106,11 @@ $$
 
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} \; \sigma_{\text{Status}=\text{"Scheduled"}}(Appointment))
+& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} \; (\sigma_{\text{Status}=\text{"Scheduled"}}(Appointment)))
 & \quad\\[6pt]
-& \rho(B, \; \text{ GROUP BY }; IID\;\text{COMPUTE}\; \text{count}(DEP\_ID)\rightarrow count1\;(A)
+& \rho(B, \; \text{ GROUP BY }\; IID\;\text{COMPUTE}\; \text{count}(DEP\_ID)\rightarrow count1\;(A))
 & \quad\\[6pt]
-& \rho(C, \;\sigma_{count1>1}(C))
+& \rho(C, \;\sigma_{count1>1}(B))
 & \quad\\[6pt]
 & \pi_{IID}(C)
 \end{alignedat}
