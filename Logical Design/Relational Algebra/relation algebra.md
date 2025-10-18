@@ -106,7 +106,7 @@ $$
 
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} \; \sigma_{\text{Status}=\text{"Scheduled"}};Appointment))
+& \rho(A, \; ClinicalActivity \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} \; \sigma_{\text{Status}=\text{"Scheduled"}}(Appointment))
 & \quad\\[6pt]
 & \rho(B, \; \text{ GROUP BY }; IID\;\text{COMPUTE}\; \text{count}(DEP\_ID)\rightarrow count1\;(A)
 & \quad\\[6pt]
