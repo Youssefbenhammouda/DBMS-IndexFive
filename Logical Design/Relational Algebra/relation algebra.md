@@ -93,7 +93,7 @@ $$
 & \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A) \\[6pt]
 & \rho(C, \; \text{ GROUP BY }; Staff\_ID \text{COMPUTE} \text{count}(PID)\rightarrow count1\;(B)) \\[6pt]
 & \rho(D, \;\sigma_{count1>1}; C) \\[6pt]
-& \pi_{Staff_ID}(D)
+& \pi_{Staff\_ID}(D)
 \end{alignedat}
 ```
 
