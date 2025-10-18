@@ -118,7 +118,7 @@ $$
 ### 12. Find Staff IDs who have no scheduled appointments on the day of the Green March holiday (November 6).
 ```math
 \begin{alignedat}{2}
-& \rho(A, \; \pi_{Staff\_ID}(\sigma_{Staus='Completed'}(\sigma_{occurred_at='2025-11-06'}(ClinicalActivity)) \; \bowtie_{ClinicalActivity.CAID=Appointment.CAID} (Appointment))\;\bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}(Staff))
+& \rho(A, \; \pi_{Staff\_ID}(\sigma_{Staus='Completed'} \wedge \text{occurred\_at} \ge \text{'2025-11-06 00:00:00'} \wedge \text{occurred\_at} < \text{'2025-11-07 00:00:00'}}((ClinicalActivity \bowtie_{ClinicalActivity.CAID=Appointment.CAID} Appointment) \bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}Staff ) ) )
 & \quad\\[6pt]
 
 ### 13. Find departments whose average number of clinical activities is below the global departmental average.
