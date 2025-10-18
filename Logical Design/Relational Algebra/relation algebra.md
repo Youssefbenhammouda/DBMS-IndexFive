@@ -94,7 +94,7 @@ $$
 & \quad\\[6pt]
 & \rho(B, \; Staff \; \bowtie_{Staff.SID=A.SID} \; A)
 & \quad\\[6pt]
-& \rho(C, \; \gamma_{ Staff\_ID\; \text{COMPUTE}\; \text{count}(PID)\rightarrow count1\};(B)) 
+& \rho(C, \; \gamma_{ \text{Staff\_ID};\; \text{count}(PID)} \rightarrow {count1}}(B)) 
 & \quad\\[6pt]
 & \rho(D, \;\sigma_{count1>1}\; (C))
 & \quad\\[6pt]
