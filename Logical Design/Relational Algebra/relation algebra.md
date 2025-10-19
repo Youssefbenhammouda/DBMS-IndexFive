@@ -108,17 +108,15 @@ $$
 ### 9. Find all CAIDs performed in Sep 2025 then restrict it to one location.
 
 $$
-\[
-\begin{aligned}
+\begin{align*}
 \text{CA1} &= \pi_{\text{CAID, Date, DEP\_ID}} \Big( \sigma_{\text{Date} \ge \text{"2025-09-01"} \wedge \text{Date} < \text{"2025-10-01"}} (\text{ClinicalActivities}) \Big) \\
 \text{D1} &= \pi_{\text{DEP\_ID, HID}} (\text{Department}) \\
 \text{H1} &= \pi_{\text{HID, City}} (\text{Hospital}) \\
 \text{CAD1} &= \text{CA1} \;\;\bowtie\;\; \text{D1} \\
 \text{CAIDs} &= \pi_{\text{CAID}} \Big( \sigma_{\text{City} = \text{"Benguerir"}} (\text{CAD1} \;\;\bowtie\;\; \text{H1}) \Big)
-\end{aligned}
-\]
-
+\end{align*}
 $$
+
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
 
 ```math
