@@ -44,9 +44,9 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
    
  **Derived FDs(via IID):**
  
- - IID &rarr; CIN,,Sex ,Birth ,Blood_group ,Phone 
+ - IID &rarr; CIN ,Sex ,Birth ,Blood_group ,Phone 
    
- - CAID &rarr; CIN,,Sex ,Birth ,Blood_group ,Phone
+ - CAID &rarr; CIN ,Sex ,Birth ,Blood_group ,Phone
 
 ### Appointment:
 
@@ -56,7 +56,7 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
 
  **Direct FDs:**
  
- - CAID &rarr; Status, Reason
+ - CAID &rarr; Status ,Reason
 
 ### Department:
 
