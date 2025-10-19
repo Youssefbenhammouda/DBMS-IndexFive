@@ -87,23 +87,23 @@ $$
 $$
 
 
-### 8. We create 2 tables and then only include patients with at least 2 different staff members
+### 8. We create 2 tables and then only include patients with at least 2 different staff members.
 
 $$
-\[
+
 CA1 = \rho_{StaffID1,\, IID} \Big( \pi_{StaffID,\, IID} (ClinicalActivity) \Big)
-\]
 
-\[
+
+
 CA2 = \rho_{StaffID2,\, IID} \Big( \pi_{StaffID,\, IID} (ClinicalActivity) \Big)
-\]
 
-\[
+
+
 \pi_{IID} \Big( 
 \sigma_{CA1.IID = CA2.IID \;\wedge\; CA1.StaffID1 \neq CA2.StaffID2} 
 (CA1 \times CA2) 
 \Big)
-\]
+
 $$
 
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
