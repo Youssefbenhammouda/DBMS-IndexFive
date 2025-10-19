@@ -87,6 +87,7 @@ $$
 $$
 
 
+
 ### 8. We create 2 tables and then only include patients with at least 2 different staff members.
 
 $$
@@ -103,6 +104,8 @@ $$
 (CA1 \times CA2) 
 \Big)
 $$
+
+
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
 
 ```math
