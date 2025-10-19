@@ -116,6 +116,34 @@ JOIN CA2
   ON CA1.IID = CA2.IID
   AND CA1.StaffID1 <> CA2.StaffID2;
 
+--- 9.Find CAIDs of clinical activities performed in September 2025 at hospitals located in “Benguerir”.
+
+WITH CA1 AS (
+    SELECT CAID, Date, DEP_ID
+    FROM ClinicalActivities
+    WHERE Date >= '2025-09-01' AND Date < '2025-10-01'
+),
+D1 AS (
+    SELECT DEP_ID, HID
+    FROM Department
+),
+H1 AS (
+    SELECT HID, City
+    FROM Hospital
+),
+CAD1 AS (
+    SELECT CA1.CAID, CA1.Date, CA1.DEP_ID, D1.HID
+    FROM CA1
+    JOIN D1 ON CA1.DEP_ID = D1.DEP_ID
+),
+CAIDs AS (
+    SELECT DISTINCT CAD1.CAID
+    FROM CAD1
+    JOIN H1 ON CAD1.HID = H1.HID
+    WHERE H1.City = 'Benguerir'
+)
+SELECT * FROM CAIDs;
+
 
 --- 10.Find Staff IDs of staff who have issued more than one prescription.
 
