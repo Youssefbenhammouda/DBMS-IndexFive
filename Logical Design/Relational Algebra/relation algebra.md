@@ -92,13 +92,9 @@ $$
 $$
 
 CA1 = \rho_{StaffID1,\, IID} \Big( \pi_{StaffID,\, IID} (ClinicalActivity) \Big)
-
-
-
+\quad\\[6pt]
 CA2 = \rho_{StaffID2,\, IID} \Big( \pi_{StaffID,\, IID} (ClinicalActivity) \Big)
-
-
-
+\quad\\[6pt]
 \pi_{IID} \Big( 
 \sigma_{CA1.IID = CA2.IID \;\wedge\; CA1.StaffID1 \neq CA2.StaffID2} 
 (CA1 \times CA2) 
