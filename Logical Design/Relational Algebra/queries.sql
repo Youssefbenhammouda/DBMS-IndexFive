@@ -99,6 +99,24 @@ WHERE a.Staff_ID NOT IN (
         FROM A
     )
 );
+
+--- 8.Find Patient IDs of patients who had clinical activities with at least two different staff members
+
+WITH CA1 AS (
+    SELECT StaffID AS StaffID1, IID
+    FROM ClinicalActivity
+),
+CA2 AS (
+    SELECT StaffID AS StaffID2, IID
+    FROM ClinicalActivity
+)
+SELECT DISTINCT CA1.IID
+FROM CA1
+JOIN CA2
+  ON CA1.IID = CA2.IID
+  AND CA1.StaffID1 <> CA2.StaffID2;
+
+
 --- 10.Find Staff IDs of staff who have issued more than one prescription.
 
 
