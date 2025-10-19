@@ -136,14 +136,20 @@ $$
 \end{alignedat}
 ```
 ### 12. Find Staff IDs who have no scheduled appointments on the day of the Green March holiday (November 6).
+
 ```math
-\begin{alignedat}{2}
-&  \rho(Allstaff,\;\pi_{Staff\_ID}(Staff))
-&\;-\;
-& \rho(A, \;\pi_{Staff\_ID}(\sigma_{\text{Staus}=\text{"Scheduled"} \wedge \text{occurred\_at} \ge \text{"2025-11-06 00:00:00"} \wedge \text{occurred\_at} < \text{"2025-11-07 00:00:00"}}((ClinicalActivity \bowtie_{ClinicalActivity.CAID=Appointment.CAID} Appointment) \bowtie_{ClinicalActivity.Staff\_ID=Staff.Staff\_ID}Staff )) ) 
-& \quad\\[6pt]
-\end{alignedat}
+\begin{aligned}
+& \rho(A, \; \sigma_{\text{Status} = \text{"Scheduled"} \wedge 
+\text{occurred\_at} \geq \text{"2024-11-06 00:00:00"} \wedge 
+\text{occurred\_at} < \text{"2024-11-07 00:00:00"}} (\text{Appointment})) \\[6pt]
+& \rho(B, \; \text{ClinicalActivity} \; \bowtie_{\text{ClinicalActivity.CAID} = \text{Appointment.CAID}} \; A) \\[6pt]
+& \rho(C, \; B \; \bowtie_{\text{ClinicalActivity.Staff\_ID} = \text{Staff.Staff\_ID}} \; \text{Staff}) \\[6pt]
+& \rho(D, \; \pi_{\text{Staff\_ID}}(C)) \\[6pt]
+& \rho(AllStaff, \; \pi_{\text{Staff\_ID}}(\text{Staff})) \\[6pt]
+& AllStaff - D
+\end{aligned}
 ```
+
 
 
 ### 13. Find departments whose average number of clinical activities is below the global departmental average.
@@ -152,9 +158,9 @@ $$
 \begin{alignedat}{2}
 & \rho(H, \; \pi_{DEP\_ID,\; CAID} (\rho(4\rightarrow depid2,\; ClinicalActivity \; \bowtie \; Department))) \\
 & \quad\\[6pt]
-& \rho(M(2 \rightarrow cnt),\;  \pi_{DEP\_ID,\; count(CAID)}(\; GROUP\; BY\; DEP\_ID \;(H)\;)\big) \\
+& \rho(M,\; \gamma_{\text{DEP\_ID}}(\text{count(CAID)} \rightarrow \text{cnt})(H)) \\
 & \quad\\[6pt]
-& \rho(AVG(1 \rightarrow avg),\; \pi_{AVG(cnt)}(M)) \\
+& \rho(AVG,\; \gamma_{\text{DEP\_ID}}(\text{AVG(cnt)} \rightarrow \text{avg})(M)) \\
 & \quad\\[6pt]
 & \rho(DEPS,\; \pi_{DEP\_ID}\big(\sigma_{M.cnt < AVG.avg}(M \times AVG)\big)) \\
 & \quad\\[6pt]
@@ -162,17 +168,15 @@ $$
 \end{alignedat}
 ```
 
-
-
 ### 14. For each staff member, return the patient who has the greatest number of completed appointments with that staff member.
 
 ```math
 \begin{alignedat}{2}
 & \rho(A, (\sigma_{status='Completed'} (ClinicalActivity \; \bowtie \; Appointment))) \\
 \\[6pt]
-& \rho(B(3 \rightarrow cnt), (\pi_{STAFF\_ID,\; IID,\; COUNT(*)} (GROUP\; BY\; STAFF\_ID,\; IID\; (A)))) \\
+& \rho(B, \gamma_{\text{STAFF\_ID},\; \text{IID}}(\text{count(*)} \rightarrow \text{cnt})(A)) \\
 \\[6pt]
-& \rho(C(2 \rightarrow mx), (\pi_{STAFF\_ID,\; MAX(cnt)} (GROUP\; BY\; STAFF\_ID\; (B)))) \\
+& \rho(C, \gamma_{\text{STAFF\_ID}}(\text{MAX(cnt)} \rightarrow \text{mx})(B)) \\
 \\[6pt]
 & \rho(D, ((C) \; \bowtie_{C.mx = B.cnt \; \wedge \; C.STAFF\_ID = B.STAFF\_ID} (B))) \\
 \\[6pt]
@@ -182,15 +186,13 @@ $$
 \end{alignedat}
 ```
 
-
-
 ### 15. List patients who had at least 3 emergency admissions during the year 2024
 
 ```math
 \begin{aligned}
 & \rho(A, \; \sigma_{Year(Date) = 2024} ((ClinicalActivity) \; \bowtie_{CAID} \; (Emergency))) \\
 \\[6pt]
-& \rho(B(2 \rightarrow cnt), \; \pi_{IID,\; count(*)} (GROUP\; BY\; IID\; (A))) \\
+& \rho(B, \; \gamma_{\text{IID}}(\text{count(*)} \rightarrow \text{cnt})(A)) \\
 \\[6pt]
 & \rho(C, \; \sigma_{cnt \geq 3} (B)) \\
 \\[6pt]
