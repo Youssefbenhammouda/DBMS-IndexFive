@@ -1,3 +1,4 @@
+--- 1.
 SELECT P.Name
 FROM Patient P
 JOIN ClinicalActivity CA
@@ -7,7 +8,7 @@ JOIN Staff S
 WHERE S.Status = 'active';
 
 
-
+--- 2.
 SELECT S.STAFF_ID
 FROM Staff S
 WHERE Status = 'active'
@@ -19,7 +20,7 @@ FROM ClinicalActivity CA
 JOIN Prescription PR
     ON CA.CAID = PR.CAID;
 
-
+--- 3.
 SELECT H.HID
 FROM Hospital H
 WHERE H.City = 'Benguerir'
