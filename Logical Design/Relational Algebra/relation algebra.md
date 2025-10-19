@@ -109,13 +109,14 @@ $$
 
 $$
 \begin{align*}
-\text{CA1} &= \pi_{\text{CAID, Date, DEP\_ID}} \Big( \sigma_{\text{Date} \ge \text{"2025-09-01"} \wedge \text{Date} < \text{"2025-10-01"}} (\text{ClinicalActivities}) \Big) \\
+\text{CA1} &= \pi_{\text{CAID, Date, DEP\_ID}} \Big( \sigma_{\text{Date} \ge "2025-09-01" \wedge \text{Date} < "2025-10-01"} (\text{ClinicalActivities}) \Big) \\
 \text{D1} &= \pi_{\text{DEP\_ID, HID}} (\text{Department}) \\
 \text{H1} &= \pi_{\text{HID, City}} (\text{Hospital}) \\
 \text{CAD1} &= \text{CA1} \;\;\bowtie\;\; \text{D1} \\
-\text{CAIDs} &= \pi_{\text{CAID}} \Big( \sigma_{\text{City} = \text{"Benguerir"}} (\text{CAD1} \;\;\bowtie\;\; \text{H1}) \Big)
+\text{CAIDs} &= \pi_{\text{CAID}} \Big( \sigma_{\text{City} = "Benguerir"} (\text{CAD1} \;\;\bowtie\;\; \text{H1}) \Big)
 \end{align*}
 $$
+
 
 ### 10.Find Staff IDs of staff who have issued more than one prescription.
 
