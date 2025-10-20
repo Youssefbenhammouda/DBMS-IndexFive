@@ -100,6 +100,35 @@ WHERE a.Staff_ID NOT IN (
     )
 );
 
+--- 7.Find pairs of staff members (s1, s2) such that s1 has handled more clinical activities than s2.
+
+WITH CA1 AS (
+    SELECT CAID, Staff_ID
+    FROM ClinicalActivities
+),
+CA2 AS (
+    SELECT Staff_ID, COUNT(CAID) AS numAct
+    FROM CA1
+    GROUP BY Staff_ID
+),
+R1 AS (
+    SELECT Staff_ID, numAct
+    FROM CA2
+),
+R2 AS (
+    SELECT Staff_ID, numAct
+    FROM CA2
+),
+Result AS (
+    SELECT 
+        r1.Staff_ID AS Staff_ID_1,
+        r2.Staff_ID AS Staff_ID_2
+    FROM R1 r1
+    CROSS JOIN R2 r2
+    WHERE r1.numAct > r2.numAct
+)
+SELECT * FROM Result;
+
 --- 8.Find Patient IDs of patients who had clinical activities with at least two different staff members
 
 WITH CA1 AS (
