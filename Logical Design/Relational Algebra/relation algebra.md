@@ -77,13 +77,21 @@ $$
 <br>
 
 
-### 6. Since Clinical Activity link staff and department we just select dept_id=2 and the result will divide staff 
+### 6. Since Clinical Activity link staff and department we just select dept_id=2 and the result will divide staff.
 
 $$
 \mathrm{Staff} \div 
 \Big(
   \sigma_{\text{dept id} = 2}(\text{Clinical Activity})
 \Big)
+$$
+
+
+### 7.The result is a table, each tuple has 2 staff members.
+
+$$
+\text{Result} = \pi_{r1.\text{Staff\_ID},\, r2.\text{Staff\_ID}}
+  \left( \sigma_{r1.\text{numAct} > r2.\text{numAct}}(R1 \times R2) \right)
 $$
 
 
