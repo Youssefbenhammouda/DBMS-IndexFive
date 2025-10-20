@@ -89,10 +89,16 @@ $$
 
 ### 7.The result is a table, each tuple has 2 staff members.
 
-$$
-\text{Result} = \pi_{r1.\text{Staff\_ID},\, r2.\text{Staff\_ID}}
+```math
+\begin{aligned}
+\text{CA1} &= \pi_{\text{CAID, Staff\_ID}}(\text{ClinicalActivities}) \\[6pt]
+\text{CA2} &= \gamma_{\text{Staff\_ID};\, \text{Count(CAID)} \rightarrow \text{numAct}}(\text{CA1}) \\[6pt]
+R1 &= \rho_{r1}(\text{CA2}) \\[6pt]
+R2 &= \rho_{r2}(\text{CA2}) \\[6pt]
+\text{Result} &= \pi_{r1.\text{Staff\_ID},\, r2.\text{Staff\_ID}}
   \left( \sigma_{r1.\text{numAct} > r2.\text{numAct}}(R1 \times R2) \right)
-$$
+\end{aligned}
+```
 
 
 
