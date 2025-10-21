@@ -47,6 +47,19 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
 - CLID → Phone
   etc
 
+### Have:
+
+**Relation:** Have(CLID, IID)
+
+**FDs:**
+
+**Direct FDs:**
+- CLID, IID → (CLID, IID)
+
+**Derived FDs:**
+- CLID, IID → CLID
+- CLID, IID → IID
+  
 ### Staff:
 
 **Relation:** Staff(STAFF_ID ,Name ,Status )
