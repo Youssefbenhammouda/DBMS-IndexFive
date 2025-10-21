@@ -1,4 +1,4 @@
-### Functional Dependencies 
+ ### Functional Dependencies 
 
 This document lists all functional dependencies (FDs) identified in the MNHS relational schema.
 These FDs shows us how attributes depend on primary keys and foreign key within each entity.
@@ -14,8 +14,17 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
  **Direct FDs:**
  
  - IID &rarr; CIN ,Name ,Sex ,Birth ,Blood_group ,Phone
- 
-   
+ - CIN &arr; IID ,Name ,Sex ,Birth ,Blood_group ,Phone
+
+ **Derived FDs:**
+ - IID &rarr; CIN
+ - IID &rarr; Name
+ - IID &rarr; Sex
+   etc
+ - CIN &rarr; IID
+ - CIN &rarr; Name
+   etc
+
 ### Staff:
 
 **Relation:** Staff(STAFF_ID ,Name ,Status )
