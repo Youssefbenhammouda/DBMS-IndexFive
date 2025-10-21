@@ -59,6 +59,19 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
 **Derived FDs:**
 - CLID, IID → CLID
 - CLID, IID → IID
+
+### Insurance:
+
+**Relation:** Insurance(InsID, Ins_type)
+
+**FDs:**
+
+**Direct FDs:**
+- InsID → Ins_type
+
+**Derived FDs:**
+- InsID → Ins_type
+  etc
   
 ### Staff:
 
