@@ -28,6 +28,25 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
 
    etc
 
+   
+### Contact_Location:
+
+**Relation:** Contact_Location(CLID, City, Province, Street, Number, Postal_code, Phone)
+
+**FDs:**
+
+**Direct FDs:**
+- CLID → City, Province, Street, Number, Postal_code, Phone
+
+**Derived FDs:**
+- CLID → City
+- CLID → Province
+- CLID → Street
+- CLID → Number
+- CLID → Postal_code
+- CLID → Phone
+  etc
+
 ### Staff:
 
 **Relation:** Staff(STAFF_ID ,Name ,Status )
