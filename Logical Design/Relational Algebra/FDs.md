@@ -14,15 +14,18 @@ These FDs shows us how attributes depend on primary keys and foreign key within 
  **Direct FDs:**
  
  - IID &rarr; CIN ,Name ,Sex ,Birth ,Blood_group ,Phone
- - CIN &arr; IID ,Name ,Sex ,Birth ,Blood_group ,Phone
+ - CIN &rarr; IID ,Name ,Sex ,Birth ,Blood_group ,Phone
 
  **Derived FDs:**
  - IID &rarr; CIN
  - IID &rarr; Name
  - IID &rarr; Sex
+
    etc
+   
  - CIN &rarr; IID
  - CIN &rarr; Name
+
    etc
 
 ### Staff:
