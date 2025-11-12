@@ -62,9 +62,13 @@ Dependency preservation is naturally ensured.
 
 **Functional Dependencies(FDs):**
 STAFF_ID → Name, Status
+
 ISA subtypes:
+
 STAFF_ID → LicenseNumber, Specialty (Practitioner)
+
 STAFF_ID → Grade, Ward (Caregiving)
+
 STAFF_ID → Modality, Certifications (Technical)
 
 **Candidate keys:** `{STAFF_ID}`
