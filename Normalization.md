@@ -61,6 +61,7 @@ Dependency preservation is naturally ensured.
 **3)Staff(STAFF_ID,Name,Status):**
 
 **Functional Dependencies(FDs):**
+
 STAFF_ID → Name, Status
 
 ISA subtypes:
@@ -86,3 +87,96 @@ Lossless join is naturally ensured.
 **Dependency preserving:**
 
 Dependency preservation is naturally ensured.
+
+
+**6)Insurance(InsID,Type):**
+
+**Functional Dependencies(FDs):**
+
+InsID → Type
+
+**Candidate keys:** `{InsID}`
+
+**BCNF validation:**
+
+InsID is a superkey → satisfies BCNF.
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+**7)ClinicalActivity(CAID,STAFF_ID,IID,ExID,DEP_ID,Date,Time,Title):**
+
+**Functional Dependencies(FDs):**
+
+CAID → Title, Time, Date, IID, STAFF_ID, DEPT_ID, ExID
+
+ISA subtypes:
+
+CAID → Status, Reason (Appointment)
+
+CAID → Triage_Level, Outcome (Emergency)
+
+
+**Candidate keys:** `{CAID}`
+
+**BCNF validation:**
+
+CAID is a superkey → satisfies BCNF.
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+**8)Expense(ExID,InsID,Total):**
+
+**Functional Dependencies(FDs):**
+
+ExpID → Total, InsID, CAID
+
+CAID ↔ ExpID
+
+InsID → Type *(Note that this FDs is not relevant here,since Type is stored in Insurance realtion)*.
+
+**Candidate keys:** `{ExpID}`
+
+**BCNF validation:**
+
+ExpID → Total, InsID, CAID
+
+ExpID is a superkey → satisfies BCNF.
+
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+
+
+
+
+
+
+
+
