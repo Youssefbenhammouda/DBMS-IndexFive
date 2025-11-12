@@ -4,6 +4,7 @@
 
 **Functional Dependencies(FDs):**
 IID → Name, Sex, Birth, BloodGroup, Phone, CIN
+
 CIN → IID, Name, Sex, Birth, BloodGroup, Phone 
 
 **Candidate keys:** `{IID}`,`{CIN}`
