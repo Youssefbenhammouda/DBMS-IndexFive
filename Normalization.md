@@ -89,7 +89,7 @@ Lossless join is naturally ensured.
 Dependency preservation is naturally ensured.
 
 
-**6)Insurance(InsID,Type):**
+**4)Insurance(InsID,Type):**
 
 **Functional Dependencies(FDs):**
 
@@ -112,7 +112,34 @@ Dependency preservation is naturally ensured.
 
 
 
-**7)ClinicalActivity(CAID,STAFF_ID,IID,ExID,DEP_ID,Date,Time,Title):**
+
+**5)Department(DEP_ID,HID,Name,Specialty):**
+
+**Functional Dependencies(FDs):**
+
+DEPT_ID → Name, Specialty, HID
+
+HID → Name, City, Region
+
+⇒ DEPT_ID → Name, Specialty, HID,(Hospital.Name, City, Region)
+
+**Candidate keys:** `{DEP_ID}`
+
+**BCNF validation:**
+
+DEP_ID is a superkey → satisfies BCNF.
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+**6)ClinicalActivity(CAID,STAFF_ID,IID,ExID,DEP_ID,Date,Time,Title):**
 
 **Functional Dependencies(FDs):**
 
@@ -142,7 +169,7 @@ Dependency preservation is naturally ensured.
 
 
 
-**8)Expense(ExID,InsID,Total):**
+**7)Expense(ExID,InsID,Total):**
 
 **Functional Dependencies(FDs):**
 
@@ -150,7 +177,7 @@ ExpID → Total, InsID, CAID
 
 CAID ↔ ExpID
 
-InsID → Type *(Note that this FDs is not relevant here,since Type is stored in Insurance realtion)*.
+InsID → Type *(Note that this FDs is not relevant here,since Type is stored in Insurance relation)*.
 
 **Candidate keys:** `{ExpID}`
 
