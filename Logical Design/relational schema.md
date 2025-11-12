@@ -234,7 +234,7 @@ This table represents the `Department` entity, which captures informations about
 This table represents the `Clinical_Activity` entity, which captures the common informations shared by every Clinical Activity, including: occurred_at, uniquely identified by the `CAID` primary key.
 
 
-### **`Appoitment and Emergency entities are a sub-type of Clinical Activity(i.e inherits attributes from Clinical Activity)`**
+### **`Appointment and Emergency entities are a sub-type of Clinical Activity(i.e inherits attributes from Clinical Activity)`**
 
 ---
 
