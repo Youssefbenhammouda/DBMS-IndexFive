@@ -1,3 +1,5 @@
+
+
 INSERT INTO Patient (CIN, Name, Sex, Birth, Blood_group, Phone) 
 VALUES 
 ('E727709', 'Yahia BELEFQUIH', 'M', '2007-04-08', 'O+', '+212 624-261540'),
@@ -82,7 +84,7 @@ VALUES
 ('Ibn Sina Hospital', 'Rabat', 'Rabat-Salé-Kénitra'),
 ('Al Farabi Hospital', 'Fes', 'Fès-Meknès'),
 ('Tangier Medical Center', 'Tangier', 'Tanger-Tetouan-Al Hoceima');
-;
+
 
 
 INSERT INTO Department (Name, Specialty, HID)
@@ -94,7 +96,7 @@ VALUES
 ('Radiology', 'Medical Imaging', 4),
 ('Emergency', 'Emergency Care', 5),
 ('Oncology', 'Cancer Treatment', 4),
-('Gynecology', 'Women\'s Health', 3),
+('Gynecology', 'Women''s Health', 3),
 ('Dermatology', 'Skin Conditions', 2),
 ('Psychiatry', 'Mental Health', 5);
 
