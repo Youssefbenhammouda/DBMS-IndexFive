@@ -322,3 +322,69 @@ Dependency preservation is naturally ensured.
 
 
 
+**11)Stock(HID,Drug_ID,UnitPrice, StockTimestamp, Qty, ReorderLevel):**
+
+**Functional Dependencies(FDs):**
+
+Each stock record is timestamped:
+
+{HID, Drug ID, Stockimestamp} → UnitPrice, StockRemaining, Qty, ReorderLevel
+
+By transitivity:
+
+{HID, Drug ID, StockTimestamp} → (Hospital attributes),(Medication attributes)
+
+
+
+**Candidate keys:** `{Drug_ID}`
+
+
+**BCNF validation:**
+
+Drug_ID is a superkey → satisfies BCNF.
+
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+
+
+
+**12)Prescription–Medication Relationship(PID,Drug_ID,Dosage,Duration):**
+
+**Functional Dependencies(FDs):**
+
+{PID, Drug_ID} → Dosage, Duration
+
+By transitivity:
+
+{PID, Drug_ID} → (Prescription attributes),(Medication attributes)
+
+
+
+
+**Candidate keys:** `{Drug_ID}`
+
+
+**BCNF validation:**
+
+Drug_ID is a superkey → satisfies BCNF.
+
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
