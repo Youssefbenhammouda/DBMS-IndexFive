@@ -195,3 +195,22 @@ VALUES
 (3, 4, '10mg', 14),
 (2, 5, '500mg', 60),
 (3, 6, '5%', 10);
+
+
+
+/* Update a patient’s phone number and a hospital’s regi */
+
+UPDATE Patient
+SET Phone = '+212-699-123456'
+WHERE CIN = 'KA789012';
+
+UPDATE Hospital
+SET Region = 'Marrakech-Safi'
+WHERE Name = 'UM6P Hospital';
+
+
+
+
+DELETE FROM Appointment
+WHERE Status = 'Cancelled'
+LIMIT 1;
