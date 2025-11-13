@@ -336,12 +336,12 @@ By transitivity:
 
 
 
-**Candidate keys:** `{Drug_ID}`
+**Candidate keys:** `{HID,Drug_ID,Stockimestamp}`
 
 
 **BCNF validation:**
 
-Drug_ID is a superkey → satisfies BCNF.
+{HID, Drug ID, StockTimestamp} is a superkey → satisfies BCNF.
 
 
 **Lossless Join:**
@@ -372,12 +372,12 @@ By transitivity:
 
 
 
-**Candidate keys:** `{Drug_ID}`
+**Candidate keys:** `{PID, Drug_ID}`
 
 
 **BCNF validation:**
 
-Drug_ID is a superkey → satisfies BCNF.
+{PID, Drug_ID} is a superkey → satisfies BCNF.
 
 
 **Lossless Join:**
@@ -388,3 +388,112 @@ Lossless join is naturally ensured.
 **Dependency preserving:**
 
 Dependency preservation is naturally ensured.
+
+
+
+
+
+
+**13)Patient–ContactLocation (Have)(IID,CLID):**
+
+**Functional Dependencies(FDs):**
+
+{IID, CLID} → (relationship attributes)
+
+By transitivity:
+
+{IID, CLID} → (Patient attributes),(ContactLocation attributes)
+
+**Candidate keys:** `{IID, CLID}`
+
+
+**BCNF validation:**
+
+{IID, CLID} is a superkey → satisfies BCNF.
+
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+
+
+
+**14)Patient–Insurance (Covers)(InsID,IID):**
+
+**Functional Dependencies(FDs):**
+
+{IID, InsID} → (relationship attributes)
+
+By transitivity:
+
+{IID, InsID} → (Patient attributes),(Insurance.Type)
+
+If a patient has only one insurance:
+
+IID → InsID → Type
+
+**Candidate keys:** `{IID, InsID}`
+
+
+**BCNF validation:**
+
+{IID, InsID} is a superkey → satisfies BCNF.
+
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+
+
+
+
+
+**15)Staff–Department (WorkIn)(STAFF_ID,DEP_ID):**
+
+**Functional Dependencies(FDs):**
+
+{STAFF_ID, DEPT_ID} → (relationship attributes)
+
+By transitivity:
+
+{STAFF_ID, DEPT_ID} → (Staff attributes),(Department + Hospital attributes)
+
+**Candidate keys:** `{STAFF_ID, DEPT_ID}`
+
+
+**BCNF validation:**
+
+{STAFF_ID, DEPT_ID} is a superkey → satisfies BCNF.
+
+
+**Lossless Join:**
+
+Lossless join is naturally ensured.
+
+
+**Dependency preserving:**
+
+Dependency preservation is naturally ensured.
+
+
+
+
+
