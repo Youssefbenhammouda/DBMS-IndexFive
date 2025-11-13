@@ -2,7 +2,7 @@ CREATE TABLE Patient(
     IID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     CIN VARCHAR(100) NOT NULL UNIQUE,
     Name VARCHAR(100) NOT NULL,
-    Sex VARCHAR(1) NOT NULL CHECK(Sex IN ('M','F')),
+    Sex ENUM('M', 'F') NOT NULL,
     Birth DATE NOT NULL,
     Blood_group VARCHAR(10) NOT NULL,
     Phone VARCHAR(20)
@@ -28,7 +28,7 @@ CREATE TABLE Have(
 
 CREATE TABLE Insurance(
     InsID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    Ins_type VARCHAR(10) CHECK (Ins_type in ('CNOPS', 'CNSS', 'RAMED', 'private') OR Ins_type IS NULL)
+    Ins_type ENUM('CNOPS','CNSS','RAMED','Amo','private') NULL 
 );
 
 CREATE TABLE Expense(
@@ -103,7 +103,7 @@ CREATE TABLE Clinical_Activity (
 
 CREATE TABLE Appointment (
     CAID INT NOT NULL PRIMARY KEY,
-    Status VARCHAR(10) CHECK (Status IN ('Scheduled', 'Completed', 'Cancelled') OR Status IS NULL),
+    Status ENUM('Scheduled', 'Completed', 'Cancelled') NULL ,
     Reason VARCHAR(255) NOT NULL,
     FOREIGN KEY (CAID) REFERENCES Clinical_Activity(CAID) ON DELETE CASCADE
 );
@@ -161,3 +161,6 @@ CREATE TABLE Stock (
     FOREIGN KEY (STAFF_ID) REFERENCES Staff(STAFF_ID) ON DELETE CASCADE,
     FOREIGN KEY (DEP_ID) REFERENCES Department(DEP_ID) ON DELETE CASCADE
 );
+
+
+ALTER TABLE Patient ADD email varchar(255);
