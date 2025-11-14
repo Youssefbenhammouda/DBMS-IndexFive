@@ -21,3 +21,36 @@ WHERE M.Class = 'Antibiotic'
     AND S.Unit_Price < 200;
 
 -- query 13
+
+
+
+-- Query 5
+
+select C.DEP_ID, count(*) from Clinical_Activity C, Appointment A 
+where C.caid = A.caid
+GROUP BY C.DEP_ID;
+
+
+-- Query 6
+
+select S.HID, AVG(S.Unit_Price) from Stock S 
+GROUP BY S.HID;
+
+
+-- Query 12 
+
+SELECT C.STAFF_ID,D.HID,COUNT(*),COUNT(*)*100/SUM(COUNT(*)) OVER(partition by D.HID) AS percentage
+FROM Clinical_Activity C JOIN Appointment A ON C.CAID = A.CAID JOIN Department D  ON C.DEP_ID = D.DEP_ID
+GROUP BY C.STAFF_ID, D.HID;
+
+
+-- Query 16
+
+select P.IID, MIN(C.occurred_at) from Patient P,Clinical_Activity C,Appointment A 
+where P.IID = C.IID and A.caid = C.caid and C.occurred_at > CURRENT_DATE
+GROUP BY P.IID;
+
+
+
+
+
