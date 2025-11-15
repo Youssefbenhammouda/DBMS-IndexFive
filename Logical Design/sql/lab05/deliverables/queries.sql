@@ -54,6 +54,8 @@ SELECT D.Name,SUM(A.Status='Scheduled') as count1,SUM(A.Status='Completed') as c
 FROM ClinicalActivity C JOIN Appointment A ON C.CAID=A.CAID JOIN Department D ON C.DEP_ID=D.DEP_ID
 GROUP BY D.Name;
 
+
+
 -- Query 12 
 
 SELECT C.STAFF_ID,D.HID,COUNT(*),COUNT(*)*100/SUM(COUNT(*)) OVER(partition by D.HID) AS percentage
