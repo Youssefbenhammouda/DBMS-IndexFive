@@ -1,7 +1,7 @@
 -- query 2
 SELECT DISTINCT I.Type
 FROM Insurance I
-ORDER BY I.Type
+ORDER BY I.Type;
 
 
     
@@ -50,7 +50,9 @@ WHERE M.Class = 'Antibiotic'
 
 -- query 10
 
-
+SELECT DISTINCT D.Name,COUNT()
+FROM Department D, Appointment A
+Where 
 
 -- Query 12 
 
