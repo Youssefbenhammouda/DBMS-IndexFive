@@ -1,5 +1,5 @@
 -- query 2
-SELECT Distinct I.Type
+SELECT DISTINCT I.Type
 FROM Insurance I
 ORDER BY I.TYPE
 
