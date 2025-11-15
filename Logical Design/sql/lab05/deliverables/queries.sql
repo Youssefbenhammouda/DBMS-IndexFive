@@ -1,11 +1,10 @@
 -- query 2
+SELECT Distinct I.Type
+FROM Insurance I
+ORDER BY I.TYPE
 
 
-
-
-
-
-
+    
 -- query 3
 SELECT S.Name
 FROM Staff S
@@ -32,10 +31,12 @@ where C.caid = A.caid
 GROUP BY C.DEP_ID;
 
 
+
 -- Query 6
 
 select S.HID, AVG(S.Unit_Price) from Stock S 
 GROUP BY S.HID;
+
 
 
 -- query 8
@@ -44,6 +45,7 @@ FROM Medication M
     JOIN Stock S ON M.DrugID = S.DrugID
 WHERE M.Class = 'Antibiotic'
     AND S.Unit_Price < 200;
+
 
 
 -- query 10
@@ -55,6 +57,7 @@ WHERE M.Class = 'Antibiotic'
 SELECT C.STAFF_ID,D.HID,COUNT(*),COUNT(*)*100/SUM(COUNT(*)) OVER(partition by D.HID) AS percentage
 FROM Clinical_Activity C JOIN Appointment A ON C.CAID = A.CAID JOIN Department D  ON C.DEP_ID = D.DEP_ID
 GROUP BY C.STAFF_ID, D.HID;
+
 
 
 -- query 13
