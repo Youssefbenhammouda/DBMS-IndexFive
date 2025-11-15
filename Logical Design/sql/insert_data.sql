@@ -83,7 +83,9 @@ VALUES
 ('Sheikh Khalifa Hospital', 'Casablanca', 'Casablanca-Settat'),
 ('Ibn Sina Hospital', 'Rabat', 'Rabat-Salé-Kénitra'),
 ('Al Farabi Hospital', 'Fes', 'Fès-Meknès'),
-('Tangier Medical Center', 'Tangier', 'Tanger-Tetouan-Al Hoceima');
+('Tangier Medical Center', 'Tangier', 'Tanger-Tetouan-Al Hoceima'),
+('Rabat Oncology Center', 'Rabat', 'Rabat-Salé-Kénitra')
+;
 
 
 
@@ -117,7 +119,12 @@ VALUES
 (2000, 2),
 (1500, 3),
 (2500, 4),
-(3000, 5);
+(3000, 5),
+(1200, 1),
+(2200, 2),
+(1800, 3),
+(2700, 4),
+(3200, 5);
 
 
 INSERT INTO Clinical_Activity(occurred_at, IID, ExID, DEP_ID, STAFF_ID)
@@ -126,7 +133,12 @@ VALUES
 ('2025-10-09 14:30:00', 2, 2, 2, 2),
 ('2025-10-11 09:15:00', 3, 3, 3, 3),
 ('2025-10-12 11:45:00', 4, 4, 4, 4),
-('2025-10-13 16:20:00', 5, 5, 5, 5)
+('2025-10-13 16:20:00', 5, 5, 5, 5),
+('2025-10-14 13:10:00', 1, 6, 1, 1),
+('2025-10-15 15:55:00', 2, 7, 2, 2),
+('2025-10-17 12:25:00', 4, 9, 4, 4),
+
+
 ;
 
 
@@ -158,7 +170,16 @@ VALUES
 ('Antifungal', 'Fluconazole', 'Tablet', '150mg', 'Fluconazole', 'FungiCure'),
 ('Sedative', 'Diazepam', 'Tablet', '5mg', 'Diazepam', 'CalmWell'),
 ('Vaccine', 'Influenza Vaccine', 'Injection', '0.5ml', 'Inactivated Influenza Virus', 'ImmunoPlus'),
-('Supplement', 'Vitamin D3', 'Capsule', '1000 IU', 'Cholecalciferol', 'NutriHealth');
+('Supplement', 'Vitamin D3', 'Capsule', '1000 IU', 'Cholecalciferol', 'NutriHealth'),
+('Antihistamine', 'Loratadine', 'Tablet', '10mg', 'Loratadine', 'AllerFree'
+),
+('Probiotic', 'Lactobacillus Acidophilus', 'Capsule', '1 Billion CFU', 'Lactobacillus Acidophilus', 'BioGut'),
+('Antipsychotic', 'Risperidone', 'Tablet', '2mg', 'Risperidone', 'MindCare'),
+('Diuretic', 'Furosemide', 'Tablet', '40mg', 'Furosemide', 'AquaPharm'),
+('Anticoagulant', 'Warfarin', 'Tablet', '5mg', 'Warfarin Sodium', 'BloodSafe'),
+('Bronchodilator', 'Albuterol', 'Inhaler', '90mcg', 'Albuterol Sulfate', 'RespiraMed')
+
+;
 
 
 INSERT INTO Stock (HID, DrugID, Unit_Price, Stock_Timestamp, Quantity, Reorder_Level)
@@ -172,7 +193,15 @@ VALUES
 (4, 7, 1.50, '2025-01-18 14:20:00', 130, 20),
 (4, 8, 0.70, '2025-01-18 14:20:00', 160, 30),
 (5, 9, 15.00, '2025-01-19 15:55:00', 80, 5),
-(5, 10, 0.40, '2025-01-19 15:55:00', 220, 50);
+(5, 10, 0.40, '2025-01-19 15:55:00', 220, 50),
+(1, 11, 0.25, '2025-01-20 09:10:00', 140, 20),
+(2, 12, 0.90, '2025-01-20 10:25:00', 110, 15),
+(3, 13, 1.80, '2025-01-21 11:35:00', 95, 10),
+(4, 14, 0.55, '2025-01-21 12:45:00', 175, 25),
+(6,5, 0.80, '2025-01-22 13:50:00', 200, 40),
+(6,6, 2.7, '2025-01-22 14:55:00', 210, 50)
+
+;
 
 
 

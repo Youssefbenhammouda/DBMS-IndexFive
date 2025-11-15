@@ -1,3 +1,9 @@
+-- query 1: Select all patients ordered by last name.
+SELECT *, REGEXP_REPLACE(Name, '^\\S*\\s','',1,1,'i') AS lastname FROM Patient
+ORDER BY lastname;
+
+
+
 -- query 2
 SELECT DISTINCT I.Type
 FROM Insurance I
@@ -38,6 +44,16 @@ select S.HID, AVG(S.Unit_Price) from Stock S
 GROUP BY S.HID;
 
 
+-- query 7: List hospitals with more than twenty emergency admissions.
+
+  SELECT H.HID,H.Name,H.City,H.Region,COUNT(H.HID) as clinical_actvitiy_count FROM Hospital H
+  JOIN Department D ON D.HID=H.HID
+   JOIN Clinical_Activity C ON C.DEP_ID=D.DEP_ID
+    JOIN Emergency E ON E.CAID = C.CAID
+    GROUP BY H.HID,H.Name,H.City,H.Region
+    HAVING clinical_actvitiy_count >20
+    ;
+
 
 -- query 8
 SELECT M.Name
@@ -46,7 +62,24 @@ FROM Medication M
 WHERE M.Class = 'Antibiotic'
     AND S.Unit_Price < 200;
 
+-- query 9: For each hospital list the top three most expensive medications.
 
+SELECT H.HID, H.Name, M.DrugID, M.Name,t.Unit_Price FROM ( 
+
+    SELECT 
+    S.HID,
+    S.DrugID ,
+    S.Unit_Price,
+    ROW_NUMBER() OVER (partition BY H.HID ORDER By S.Unit_Price desc) as row_num
+    FROM Hospital H
+    JOIN Stock S on S.HID=H.HID  
+) t
+
+JOIN `Hospital` H ON H.HID = t.HID
+JOIN `Medication` M ON M.DrugID = t.DrugID
+
+where t.row_num <=3
+  ;
 
 -- query 10
 
@@ -84,7 +117,18 @@ FROM Patients P JOIN ClinicalActivity C ON P.IID=C.IID JOIN Emergency E ON C.CAI
 GROUP BY P.IID,P.Name
 HAVING count1>=2 AND max1>=(CURRENT_DATE()-14);
 
-
+-- Query 19: Within each city return medications whose hospital prices show a spread greater than thirty percent between minimum and maximum.
+select t.city,t.DrugId,t.Name FROM 
+(Select H.city,M.DrugID,M.Name,
+min(S.Unit_Price) as min_price,
+max(S.Unit_Price) as max_price
+FROM `Stock` S
+JOIN `Medication` M ON S.DrugID = M.DrugID
+JOIN `Hospital` H ON H.HID = S.HID
+GROUP BY M.DrugID,H.City
+  ) t
+WHERE t.max_price > 1.3*min_price
+  ;
 
 -- Query 20
 SELECT *
