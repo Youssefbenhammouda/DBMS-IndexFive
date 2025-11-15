@@ -70,12 +70,17 @@ GROUP BY C.STAFF_ID, D.HID;
 -- Query 16
 
 select P.IID, MIN(C.occurred_at) from Patient P,Clinical_Activity C,Appointment A 
-where P.IID = C.IID and A.caid = C.caid and C.occurred_at > CURRENT_DATE
+WHERE P.IID = C.IID and A.caid = C.caid and C.occurred_at > CURRENT_DATE
 GROUP BY P.IID;
 
 
 
 -- Query 17
+
+SELECT P.IID,P.Name,Count(E.CAID) as count1,MAX(C.DATE) as max1
+FROM Patients P JOIN ClinicalActivity C ON P.IID=C.IID JOIN Emergency E ON C.CAID=E.CAID
+GROUP BY P.IID,P.Name
+HAVING count1>=2 AND max1>=(CURRENT_DATE() -14);
 
 
 
