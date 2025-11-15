@@ -80,12 +80,14 @@ GROUP BY P.IID;
 SELECT P.IID,P.Name,Count(E.CAID) as count1,MAX(C.DATE) as max1
 FROM Patients P JOIN ClinicalActivity C ON P.IID=C.IID JOIN Emergency E ON C.CAID=E.CAID
 GROUP BY P.IID,P.Name
-HAVING count1>=2 AND max1>=(CURRENT_DATE() -14);
+HAVING count1>=2 AND max1>=(CURRENT_DATE()-14);
 
 
 
 -- Query 20
-
+SELECT *
+FROM Stock S
+WHERE S.Qty<0 OR S.UnitPrice<=0;
 
 
 
