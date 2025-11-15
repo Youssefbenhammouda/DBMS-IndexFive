@@ -1,7 +1,7 @@
 -- query 2
 SELECT DISTINCT I.Type
 FROM Insurance I
-ORDER BY I.TYPE
+ORDER BY I.Type
 
 
     
