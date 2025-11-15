@@ -50,9 +50,9 @@ WHERE M.Class = 'Antibiotic'
 
 -- query 10
 
-SELECT DISTINCT D.Name,COUNT()
-FROM Department D, Appointment A
-Where 
+SELECT D.Name,SUM(A.Status='Scheduled') as count1,SUM(A.Status='Completed') as count2,SUM(A.Status='Cancelled') as count3
+FROM ClinicalActivity C JOIN Appointment A ON C.CAID=A.CAID JOIN Department D ON C.DEP_ID=D.DEP_ID
+GROUP BY D.Name;
 
 -- Query 12 
 
