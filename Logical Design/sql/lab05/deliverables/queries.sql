@@ -1,3 +1,11 @@
+-- query 2
+
+
+
+
+
+
+
 -- query 3
 SELECT S.Name
 FROM Staff S
@@ -6,21 +14,14 @@ FROM Staff S
     JOIN Hospital H ON D.HID = H.HID
 WHERE H.City = 'Rabat';
 
+
+
 -- query 4
 SELECT *
 FROM Appointment A
     JOIN Clinical_Activity CA ON A.CAID = CA.CAID
 WHERE A.Status = 'Scheduled'
     AND CA.occurred_at BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY);
-
--- query 8
-SELECT M.Name
-FROM Medication M
-    JOIN Stock S ON M.DrugID = S.DrugID
-WHERE M.Class = 'Antibiotic'
-    AND S.Unit_Price < 200;
-
--- query 13
 
 
 
@@ -37,11 +38,28 @@ select S.HID, AVG(S.Unit_Price) from Stock S
 GROUP BY S.HID;
 
 
+-- query 8
+SELECT M.Name
+FROM Medication M
+    JOIN Stock S ON M.DrugID = S.DrugID
+WHERE M.Class = 'Antibiotic'
+    AND S.Unit_Price < 200;
+
+
+-- query 10
+
+
+
 -- Query 12 
 
 SELECT C.STAFF_ID,D.HID,COUNT(*),COUNT(*)*100/SUM(COUNT(*)) OVER(partition by D.HID) AS percentage
 FROM Clinical_Activity C JOIN Appointment A ON C.CAID = A.CAID JOIN Department D  ON C.DEP_ID = D.DEP_ID
 GROUP BY C.STAFF_ID, D.HID;
+
+
+-- query 13
+
+
 
 
 -- Query 16
@@ -50,6 +68,13 @@ select P.IID, MIN(C.occurred_at) from Patient P,Clinical_Activity C,Appointment 
 where P.IID = C.IID and A.caid = C.caid and C.occurred_at > CURRENT_DATE
 GROUP BY P.IID;
 
+
+
+-- Query 17
+
+
+
+-- Query 20
 
 
 
