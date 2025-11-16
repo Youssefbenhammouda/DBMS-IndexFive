@@ -133,7 +133,7 @@ WHERE t.max_price > 1.3*min_price
 -- Query 20
 SELECT *
 FROM Stock S
-WHERE S.Qty<0 OR S.UnitPrice<=0;
+WHERE S.Quantity<0 OR S.Unit_Price<=0;
 
 
 
