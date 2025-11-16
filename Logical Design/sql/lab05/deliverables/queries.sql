@@ -160,7 +160,7 @@ JOIN CityAvg ca
 SELECT P.IID,P.Name,Count(E.CAID) as count1,MAX(C.occurred_at) as max1
 FROM Patient P JOIN Clinical_Activity C ON P.IID=C.IID JOIN Emergency E ON C.CAID=E.CAID
 GROUP BY P.IID,P.Name
-HAVING count1>=2 AND max1>=(CURRENT_DATE()-INTERVAL 14 DAY);
+HAVING count1>=2 AND max1>=CURRENT_DATE()-INTERVAL 14 DAY;
 
 
 --Query 18
