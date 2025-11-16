@@ -103,15 +103,16 @@ WHERE p.IID NOT IN (
   );
 
 -- Query 12 
-SELECT C.STAFF_ID,
-  D.HID,
-  COUNT(*),
-  COUNT(*) * 100 / SUM(COUNT(*)) OVER(partition by D.HID) AS percentage
-FROM Clinical_Activity C
-  JOIN Appointment A ON C.CAID = A.CAID
-  JOIN Department D ON C.DEP_ID = D.DEP_ID
-GROUP BY C.STAFF_ID,
-  D.HID;
+SELECT X.staff_id, Y.HID, X.Total_Appointments,(X.Total_Appointments/Y.Total_App_Hospital)*100
+from (
+select C.STAFF_ID, D.HID, count(*) as Total_Appointments
+from clinical_activity C join appointment A on C.CAID = A.CAID join department D on D.DEP_ID = C.DEP_ID 
+GROUP BY C.STAFF_ID,D.HID) X
+join (
+select D.HID, count(*) Total_App_Hospital
+from clinical_activity C join appointment A on C.CAID = A.CAID join department D on D.DEP_ID = C.DEP_ID 
+GROUP BY D.HID) Y
+on X.HID = Y.HID
 
 -- query 13
 SELECT M.DrugID,
@@ -141,6 +142,42 @@ WHERE NOT EXISTS (
       )
   );
 
+
+-- Query 15
+WITH HospitalAvg AS (
+    SELECT 
+        s.HID AS hospital_id, 
+        m.Class AS drug_class,
+        AVG(s.Unit_Price) AS avg_price
+    FROM Stock s
+    JOIN Medication m ON s.DrugID = m.DrugID
+    GROUP BY s.HID, m.Class
+), 
+CityAvg AS (
+    SELECT 
+        h.City AS city_name,
+        m.Class AS drug_class,
+        AVG(s.Unit_Price) AS city_avg
+    FROM Stock s
+    JOIN Medication m ON s.DrugID = m.DrugID
+    JOIN Hospital h ON s.HID = h.HID
+    GROUP BY h.City, m.Class
+)
+SELECT 
+    ha.hospital_id,
+    ha.drug_class,
+    ha.avg_price,
+    CASE 
+        WHEN ha.avg_price > ca.city_avg THEN 'Above'
+        ELSE 'Not Above'
+    END AS price_flag
+FROM HospitalAvg ha
+JOIN Hospital h ON ha.hospital_id = h.HID
+JOIN CityAvg ca 
+    ON h.City = ca.city_name 
+   AND ha.drug_class = ca.drug_class;
+
+
 -- Query 16
 select P.IID,
   MIN(C.occurred_at)
@@ -164,6 +201,21 @@ GROUP BY P.IID,
   P.Name
 HAVING count1 >= 2
   AND max1 >= CURRENT_DATE() - INTERVAL 14 DAY;
+
+-- Query 18
+
+
+SELECT H.HID, H.Name, H.City, COUNT(*) AS Completed
+FROM Hospital H
+JOIN Department D ON D.HID = H.HID
+JOIN ClinicalActivity CA ON CA.DEP_ID = D.DEP_ID
+JOIN Appointment A ON A.CAID = CA.CAID
+WHERE A.status = 'Completed'
+  AND CA.Date >= CURRENT_DATE() - INTERVAL 90 DAY
+GROUP BY H.HID, H.Name, H.City
+ORDER BY H.City, Completed DESC;
+
+
 
 -- Query 19: Within each city return medications whose hospital prices show a spread greater than thirty percent between minimum and maximum.
 select t.city,
