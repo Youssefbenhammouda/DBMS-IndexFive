@@ -103,7 +103,7 @@ WHERE p.IID NOT IN (
   );
 
 -- Query 12 
-SELECT X.staff_id, Y.HID, X.Total_Appointments,(X.Total_Appointments/Y.Total_App_Hospital)*100
+SELECT X.staff_id, Y.HID, X.Total_Appointments,(X.Total_Appointments*1.0/Y.Total_App_Hospital)*100 /*I multiplied by 1.0 to avoid integer division*/
 from (
 select C.STAFF_ID, D.HID, count(*) as Total_Appointments
 from clinical_activity C join appointment A on C.CAID = A.CAID join department D on D.DEP_ID = C.DEP_ID 
@@ -112,7 +112,9 @@ join (
 select D.HID, count(*) Total_App_Hospital
 from clinical_activity C join appointment A on C.CAID = A.CAID join department D on D.DEP_ID = C.DEP_ID 
 GROUP BY D.HID) Y
-on X.HID = Y.HID
+on X.HID = Y.HID;
+
+
 
 -- query 13
 SELECT M.DrugID,
@@ -125,6 +127,8 @@ FROM Stock S
   JOIN Medication M ON S.DrugID = M.DrugID
   JOIN Hospital H ON S.HID = H.HID
 WHERE S.Quantity < S.Reorder_Level;
+
+
 
 -- Query 14
 SELECT h.HID,
@@ -142,10 +146,9 @@ WHERE NOT EXISTS (
       )
   );
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 164b6d58505a886798632a174072b71073b1682e
+
+
 -- Query 15
 WITH HospitalAvg AS (
     SELECT 
@@ -181,10 +184,8 @@ JOIN CityAvg ca
    AND ha.drug_class = ca.drug_class;
 
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 164b6d58505a886798632a174072b71073b1682e
+
 -- Query 16
 select P.IID,
   MIN(C.occurred_at)
@@ -195,6 +196,8 @@ WHERE P.IID = C.IID
   and A.caid = C.caid
   and C.occurred_at > CURRENT_DATE
 GROUP BY P.IID;
+
+
 
 -- Query 17
 SELECT P.IID,
@@ -211,25 +214,22 @@ HAVING count1 >= 2
 
 -- Query 18
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 164b6d58505a886798632a174072b71073b1682e
+
+
 SELECT H.HID, H.Name, H.City, COUNT(*) AS Completed
 FROM Hospital H
 JOIN Department D ON D.HID = H.HID
-JOIN ClinicalActivity CA ON CA.DEP_ID = D.DEP_ID
+JOIN Clinical_Activity CA ON CA.DEP_ID = D.DEP_ID
 JOIN Appointment A ON A.CAID = CA.CAID
 WHERE A.status = 'Completed'
-  AND CA.Date >= CURRENT_DATE() - INTERVAL 90 DAY
+  AND CA.occurred_at >= CURRENT_DATE() - INTERVAL 90 DAY
 GROUP BY H.HID, H.Name, H.City
 ORDER BY H.City, Completed DESC;
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 164b6d58505a886798632a174072b71073b1682e
+
 -- Query 19: Within each city return medications whose hospital prices show a spread greater than thirty percent between minimum and maximum.
 select t.city,
   t.DrugId,
@@ -247,6 +247,8 @@ FROM (
       H.City
   ) t
 WHERE t.max_price > 1.3 * min_price;
+
+
 
 -- Query 20
 SELECT *
