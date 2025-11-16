@@ -84,7 +84,7 @@ where t.row_num <=3
 -- query 10
 
 SELECT D.Name,SUM(A.Status='Scheduled') as count1,SUM(A.Status='Completed') as count2,SUM(A.Status='Cancelled') as count3
-FROM ClinicalActivity C JOIN Appointment A ON C.CAID=A.CAID JOIN Department D ON C.DEP_ID=D.DEP_ID
+FROM Clinical_Activity C JOIN Appointment A ON C.CAID=A.CAID JOIN Department D ON C.DEP_ID=D.DEP_ID
 GROUP BY D.Name;
 
 
