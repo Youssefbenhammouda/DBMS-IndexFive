@@ -120,7 +120,7 @@ WHERE NOT EXISTS (
           SELECT s.DrugID FROM stock s WHERE s.HID = h.HID AND s.drugID = m.drugID)
 );
 
---Query 15
+-- Query 15
 
 WITH HospitalAvg AS (
     SELECT 
