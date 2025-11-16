@@ -142,7 +142,10 @@ WHERE NOT EXISTS (
       )
   );
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 164b6d58505a886798632a174072b71073b1682e
 -- Query 15
 WITH HospitalAvg AS (
     SELECT 
@@ -178,6 +181,10 @@ JOIN CityAvg ca
    AND ha.drug_class = ca.drug_class;
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 164b6d58505a886798632a174072b71073b1682e
 -- Query 16
 select P.IID,
   MIN(C.occurred_at)
@@ -204,7 +211,10 @@ HAVING count1 >= 2
 
 -- Query 18
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 164b6d58505a886798632a174072b71073b1682e
 SELECT H.HID, H.Name, H.City, COUNT(*) AS Completed
 FROM Hospital H
 JOIN Department D ON D.HID = H.HID
@@ -215,8 +225,11 @@ WHERE A.status = 'Completed'
 GROUP BY H.HID, H.Name, H.City
 ORDER BY H.City, Completed DESC;
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 164b6d58505a886798632a174072b71073b1682e
 -- Query 19: Within each city return medications whose hospital prices show a spread greater than thirty percent between minimum and maximum.
 select t.city,
   t.DrugId,
