@@ -93,10 +93,10 @@ GROUP BY D.Name;
 SELECT p.IID
 FROM patient p
 WHERE p.IID NOT IN (
-  SELECT DISTINCT ca.IID
-  FROM clinical_activity ca
-  WHERE ca.date >= CURRENT_DATE()
-    AND ca.date <= DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
+SELECT DISTINCT ca.IID
+FROM clinical_activity ca
+WHERE ca.date >= CURRENT_DATE()
+AND ca.date <= DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
 );
 
 -- Query 12 
@@ -111,14 +111,49 @@ GROUP BY C.STAFF_ID, D.HID;
 
 
 
+--Query 14
 
--- Query 16
+SELECT h.HID, h.name
+FROM hospital h
+WHERE NOT EXISTS (
+    SELECT m.drug_id FROM medication m WHERE m.class = 'antibiotic' AND NOT EXISTS (
+          SELECT s.drug_ID FROM stock s WHERE s.HID = h.HID AND s.drug_ID = m.drug_ID)
+);
 
-select P.IID, MIN(C.occurred_at) from Patient P,Clinical_Activity C,Appointment A 
-WHERE P.IID = C.IID and A.caid = C.caid and C.occurred_at > CURRENT_DATE
-GROUP BY P.IID;
+--Query 15
 
-
+WITH HospitalAvg AS (
+    SELECT 
+        s.HID AS hospital_id, 
+        m.class AS drug_class,
+        AVG(s.unit_price) AS avg_price
+    FROM stock s
+    JOIN medication m ON s.drug_id = m.drug_id
+    GROUP BY s.HID, m.class
+), 
+CityAvg AS (
+    SELECT 
+        h.city AS city_name,
+        m.class AS drug_class,
+        AVG(s.unit_price) AS city_avg
+    FROM stock s
+    JOIN medication m ON s.drug_id = m.drug_id
+    JOIN hospital h ON s.HID = h.HID
+    GROUP BY h.city, m.class
+)
+SELECT 
+    ha.hospital_id,
+    ha.drug_class,
+    ha.avg_price,
+    CASE 
+        WHEN ha.avg_price > ca.city_avg THEN 'Above'
+        ELSE 'Not Above'
+    END AS flag
+FROM HospitalAvg ha
+JOIN hospital h ON ha.hospital_id = h.HID
+JOIN CityAvg ca 
+    ON h.city = ca.city_name 
+   AND ha.drug_class = ca.drug_class;
 
 -- Query 17
 
@@ -126,6 +161,20 @@ SELECT P.IID,P.Name,Count(E.CAID) as count1,MAX(C.occurred_at) as max1
 FROM Patient P JOIN Clinical_Activity C ON P.IID=C.IID JOIN Emergency E ON C.CAID=E.CAID
 GROUP BY P.IID,P.Name
 HAVING count1>=2 AND max1>=(CURRENT_DATE()-14);
+
+
+--Query 18
+
+SELECT H.HID, H.Name, H.City, COUNT(*) AS Completed
+FROM Hospital H
+JOIN Department D ON D.HID = H.HID
+JOIN ClinicalActivity CA ON CA.DEP_ID = D.DEP_ID
+JOIN Appointment A ON A.CAID = CA.CAID
+WHERE A.status = 'Completed'
+  AND CA.Date >= CURRENT_DATE() - INTERVAL 90 DAY
+GROUP BY H.HID, H.Name, H.City
+ORDER BY H.City, Completed DESC;
+
 
 -- Query 19: Within each city return medications whose hospital prices show a spread greater than thirty percent between minimum and maximum.
 select t.city,t.DrugId,t.Name FROM 
