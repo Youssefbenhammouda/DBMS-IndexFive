@@ -239,7 +239,7 @@ WHERE CIN = 'KA789012';
 
 UPDATE Hospital
 SET Region = 'Marrakech-Safi'
-WHERE Name = 'UM6P Hospital';
+WHERE HID=1;
 
 
 
