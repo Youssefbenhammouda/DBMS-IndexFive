@@ -5,9 +5,9 @@ ORDER BY lastname;
 
 
 -- query 2
-SELECT DISTINCT I.Type
+SELECT DISTINCT I.Ins_type
 FROM Insurance I
-ORDER BY I.Type;
+ORDER BY I.Ins_type;
 
 
     
