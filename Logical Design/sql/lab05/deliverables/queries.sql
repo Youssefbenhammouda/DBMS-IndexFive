@@ -88,6 +88,16 @@ FROM Clinical_Activity C JOIN Appointment A ON C.CAID=A.CAID JOIN Department D O
 GROUP BY D.Name;
 
 
+--Query 11
+
+SELECT p.IID
+FROM patient p
+WHERE p.IID NOT IN (
+  SELECT DISTINCT ca.IID
+  FROM clinical_activity ca
+  WHERE ca.date >= CURRENT_DATE()
+    AND ca.date <= DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
+);
 
 -- Query 12 
 
