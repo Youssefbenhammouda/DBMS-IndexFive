@@ -1,13 +1,13 @@
 -- query 1: Select all patients ordered by last name.
 SELECT *,
-  REGEXP_REPLACE(Name, '^\\S*\\s', '', 1, 1, 'i') AS lastname
+  SUBSTRING_INDEX(FullName, ' ', -1) AS lastname
 FROM Patient
 ORDER BY lastname;
 
 -- query 2
-SELECT DISTINCT I.Ins_type
+SELECT DISTINCT I.Type
 FROM Insurance I
-ORDER BY I.Ins_type;
+ORDER BY I.Type;
 
 -- query 3
 SELECT S.Name
@@ -20,22 +20,22 @@ WHERE H.City = 'Rabat';
 -- query 4
 SELECT *
 FROM Appointment A
-  JOIN Clinical_Activity CA ON A.CAID = CA.CAID
+  JOIN ClinicalActivity CA ON A.CAID = CA.CAID
 WHERE A.Status = 'Scheduled'
-  AND CA.occurred_at BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY);
+  AND CA.Date BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY);
 
 -- Query 5
-select C.DEP_ID,
-  count(*)
-from Clinical_Activity C,
+SELECT C.DEP_ID,
+  COUNT(*)
+FROM ClinicalActivity C,
   Appointment A
-where C.caid = A.caid
+WHERE C.CAID = A.CAID
 GROUP BY C.DEP_ID;
 
 -- Query 6
-select S.HID,
-  AVG(S.Unit_Price)
-from Stock S
+SELECT S.HID,
+  AVG(S.UnitPrice)
+FROM Stock S
 GROUP BY S.HID;
 
 -- query 7: List hospitals with more than twenty emergency admissions.
@@ -43,51 +43,51 @@ SELECT H.HID,
   H.Name,
   H.City,
   H.Region,
-  COUNT(H.HID) as clinical_actvitiy_count
+  COUNT(H.HID) as clinical_activity_count
 FROM Hospital H
   JOIN Department D ON D.HID = H.HID
-  JOIN Clinical_Activity C ON C.DEP_ID = D.DEP_ID
+  JOIN ClinicalActivity C ON C.DEP_ID = D.DEP_ID
   JOIN Emergency E ON E.CAID = C.CAID
 GROUP BY H.HID,
   H.Name,
   H.City,
   H.Region
-HAVING clinical_actvitiy_count > 20;
+HAVING clinical_activity_count > 20;
 
 -- query 8
 SELECT M.Name
 FROM Medication M
-  JOIN Stock S ON M.DrugID = S.DrugID
+  JOIN Stock S ON M.Drug_ID = S.Drug_ID
 WHERE M.Class = 'Antibiotic'
-  AND S.Unit_Price < 200;
+  AND S.UnitPrice < 200;
 
 -- query 9: For each hospital list the top three most expensive medications.
 SELECT H.HID,
   H.Name,
-  M.DrugID,
+  M.Drug_ID,
   M.Name,
-  t.Unit_Price
+  t.UnitPrice
 FROM (
     SELECT S.HID,
-      S.DrugID,
-      S.Unit_Price,
+      S.Drug_ID,
+      S.UnitPrice,
       ROW_NUMBER() OVER (
-        partition BY H.HID
-        ORDER By S.Unit_Price desc
+        PARTITION BY S.HID
+        ORDER BY S.UnitPrice DESC
       ) as row_num
     FROM Hospital H
       JOIN Stock S on S.HID = H.HID
   ) t
-  JOIN `Hospital` H ON H.HID = t.HID
-  JOIN `Medication` M ON M.DrugID = t.DrugID
-where t.row_num <= 3;
+  JOIN Hospital H ON H.HID = t.HID
+  JOIN Medication M ON M.Drug_ID = t.Drug_ID
+WHERE t.row_num <= 3;
 
 -- query 10
 SELECT D.Name,
   SUM(A.Status = 'Scheduled') as count1,
   SUM(A.Status = 'Completed') as count2,
   SUM(A.Status = 'Cancelled') as count3
-FROM Clinical_Activity C
+FROM ClinicalActivity C
   JOIN Appointment A ON C.CAID = A.CAID
   JOIN Department D ON C.DEP_ID = D.DEP_ID
 GROUP BY D.Name;
@@ -97,75 +97,73 @@ SELECT p.IID
 FROM Patient p
 WHERE p.IID NOT IN (
     SELECT DISTINCT ca.IID
-    FROM Clinical_Activity ca
-    WHERE ca.occurred_at >= CURRENT_DATE()
-      AND ca.occurred_at <= DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
+    FROM ClinicalActivity ca
+    WHERE ca.Date >= CURRENT_DATE()
+      AND ca.Date <= DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
   );
 
 -- Query 12 
-SELECT X.staff_id, Y.HID, X.Total_Appointments,(X.Total_Appointments*1.0/Y.Total_App_Hospital)*100 /*I multiplied by 1.0 to avoid integer division*/
-from (
-select C.STAFF_ID, D.HID, count(*) as Total_Appointments
-from clinical_activity C join appointment A on C.CAID = A.CAID join department D on D.DEP_ID = C.DEP_ID 
-GROUP BY C.STAFF_ID,D.HID) X
-join (
-select D.HID, count(*) Total_App_Hospital
-from clinical_activity C join appointment A on C.CAID = A.CAID join department D on D.DEP_ID = C.DEP_ID 
-GROUP BY D.HID) Y
-on X.HID = Y.HID;
-
-
+SELECT X.staff_id, Y.HID, X.Total_Appointments,(X.Total_Appointments*1.0/Y.Total_App_Hospital)*100
+FROM (
+    SELECT C.STAFF_ID, D.HID, COUNT(*) as Total_Appointments
+    FROM ClinicalActivity C 
+    JOIN Appointment A ON C.CAID = A.CAID 
+    JOIN Department D ON D.DEP_ID = C.DEP_ID 
+    GROUP BY C.STAFF_ID, D.HID
+) X
+JOIN (
+    SELECT D.HID, COUNT(*) Total_App_Hospital
+    FROM ClinicalActivity C 
+    JOIN Appointment A ON C.CAID = A.CAID 
+    JOIN Department D ON D.DEP_ID = C.DEP_ID 
+    GROUP BY D.HID
+) Y ON X.HID = Y.HID;
 
 -- query 13
-SELECT M.DrugID,
+SELECT M.Drug_ID,
   M.Name,
   H.HID,
   H.Name,
-  S.Quantity,
-  S.Reorder_Level
+  S.Qty,
+  S.ReorderLevel
 FROM Stock S
-  JOIN Medication M ON S.DrugID = M.DrugID
+  JOIN Medication M ON S.Drug_ID = M.Drug_ID
   JOIN Hospital H ON S.HID = H.HID
-WHERE S.Quantity < S.Reorder_Level;
-
-
+WHERE S.Qty < S.ReorderLevel;
 
 -- Query 14
 SELECT h.HID,
-  h.name
-FROM hospital h
+  h.Name
+FROM Hospital h
 WHERE NOT EXISTS (
-    SELECT m.DrugID
-    FROM medication m
-    WHERE m.class = 'antibiotic'
+    SELECT m.Drug_ID
+    FROM Medication m
+    WHERE m.Class = 'Antibiotic'
       AND NOT EXISTS (
-        SELECT s.DrugID
-        FROM stock s
+        SELECT s.Drug_ID
+        FROM Stock s
         WHERE s.HID = h.HID
-          AND s.drugID = m.drugID
+          AND s.Drug_ID = m.Drug_ID
       )
   );
-
-
-
 
 -- Query 15
 WITH HospitalAvg AS (
     SELECT 
         s.HID AS hospital_id, 
         m.Class AS drug_class,
-        AVG(s.Unit_Price) AS avg_price
+        AVG(s.UnitPrice) AS avg_price
     FROM Stock s
-    JOIN Medication m ON s.DrugID = m.DrugID
+    JOIN Medication m ON s.Drug_ID = m.Drug_ID
     GROUP BY s.HID, m.Class
 ), 
 CityAvg AS (
     SELECT 
         h.City AS city_name,
         m.Class AS drug_class,
-        AVG(s.Unit_Price) AS city_avg
+        AVG(s.UnitPrice) AS city_avg
     FROM Stock s
-    JOIN Medication m ON s.DrugID = m.DrugID
+    JOIN Medication m ON s.Drug_ID = m.Drug_ID
     JOIN Hospital h ON s.HID = h.HID
     GROUP BY h.City, m.Class
 )
@@ -183,74 +181,61 @@ JOIN CityAvg ca
     ON h.City = ca.city_name 
    AND ha.drug_class = ca.drug_class;
 
-
-
-
 -- Query 16
-select C.IID,
-  MIN(C.occurred_at)
-from 
-  Clinical_Activity C join Appointment A on A.caid = C.caid
+SELECT C.IID,
+  MIN(C.Date)
+FROM 
+  ClinicalActivity C 
+  JOIN Appointment A ON A.CAID = C.CAID
 WHERE 
-  A.status = "Scheduled"
-  and C.occurred_at > CURRENT_DATE
+  A.Status = "Scheduled"
+  AND C.Date > CURRENT_DATE
 GROUP BY C.IID;
-
-
 
 -- Query 17
 SELECT P.IID,
-  P.Name,
-  Count(E.CAID) as count1,
-  MAX(C.occurred_at) as max1
+  P.FullName,
+  COUNT(E.CAID) as count1,
+  MAX(C.Date) as max1
 FROM Patient P
-  JOIN Clinical_Activity C ON P.IID = C.IID
+  JOIN ClinicalActivity C ON P.IID = C.IID
   JOIN Emergency E ON C.CAID = E.CAID
 GROUP BY P.IID,
-  P.Name
+  P.FullName
 HAVING count1 >= 2
   AND max1 >= CURRENT_DATE() - INTERVAL 14 DAY;
 
 -- Query 18
-
-
-
-
 SELECT H.HID, H.Name, H.City, COUNT(*) AS Completed
 FROM Hospital H
 JOIN Department D ON D.HID = H.HID
-JOIN Clinical_Activity CA ON CA.DEP_ID = D.DEP_ID
+JOIN ClinicalActivity CA ON CA.DEP_ID = D.DEP_ID
 JOIN Appointment A ON A.CAID = CA.CAID
-WHERE A.status = 'Completed'
-  AND CA.occurred_at >= CURRENT_DATE() - INTERVAL 90 DAY
+WHERE A.Status = 'Completed'
+  AND CA.Date >= CURRENT_DATE() - INTERVAL 90 DAY
 GROUP BY H.HID, H.Name, H.City
 ORDER BY H.City, Completed DESC;
 
-
-
-
 -- Query 19: Within each city return medications whose hospital prices show a spread greater than thirty percent between minimum and maximum.
-select t.city,
-  t.DrugId,
+SELECT t.City,
+  t.Drug_ID,
   t.Name
 FROM (
-    Select H.city,
-      M.DrugID,
+    SELECT H.City,
+      M.Drug_ID,
       M.Name,
-      min(S.Unit_Price) as min_price,
-      max(S.Unit_Price) as max_price
-    FROM `Stock` S
-      JOIN `Medication` M ON S.DrugID = M.DrugID
-      JOIN `Hospital` H ON H.HID = S.HID
-    GROUP BY M.DrugID,
+      MIN(S.UnitPrice) as min_price,
+      MAX(S.UnitPrice) as max_price
+    FROM Stock S
+      JOIN Medication M ON S.Drug_ID = M.Drug_ID
+      JOIN Hospital H ON H.HID = S.HID
+    GROUP BY M.Drug_ID,
       H.City
   ) t
 WHERE t.max_price > 1.3 * min_price;
 
-
-
 -- Query 20
 SELECT *
 FROM Stock S
-WHERE S.Quantity < 0
-  OR S.Unit_Price <= 0;
+WHERE S.Qty < 0
+  OR S.UnitPrice <= 0;

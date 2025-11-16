@@ -1,14 +1,14 @@
 -- Insert sample data for Patient
-INSERT INTO Patient (CIN, Name, Sex, Birth, Blood_group, Phone) VALUES
-('AB123456', 'Ahmed Benali', 'M', '1985-03-15', 'A+', '0612345678'),
-('CD789012', 'Fatima Zahra', 'F', '1990-07-22', 'O+', '0623456789'),
-('EF345678', 'Mohammed Alami', 'M', '1978-11-30', 'B+', '0634567890'),
-('GH901234', 'Amina Toumi', 'F', '1995-05-14', 'AB+', '0645678901'),
-('IJ567890', 'Youssef Kassi', 'M', '1982-09-08', 'A-', '0656789012'),
-('KL123456', 'Leila Mansouri', 'F', '1988-12-25', 'O-', '0667890123');
+INSERT INTO Patient (IID, CIN, FullName, Birth, Sex, BloodGroup, Phone) VALUES
+(1, 'AB123456', 'Ahmed Benali', '1985-03-15', 'M', 'A+', '0612345678'),
+(2, 'CD789012', 'Fatima Zahra', '1990-07-22', 'F', 'O+', '0623456789'),
+(3, 'EF345678', 'Mohammed Alami', '1978-11-30', 'M', 'B+', '0634567890'),
+(4, 'GH901234', 'Amina Toumi', '1995-05-14', 'F', 'AB+', '0645678901'),
+(5, 'IJ567890', 'Youssef Kassi', '1982-09-08', 'M', 'A-', '0656789012'),
+(6, 'KL123456', 'Leila Mansouri', '1988-12-25', 'F', 'O-', '0667890123');
 
--- Insert sample data for Contact_Location
-INSERT INTO Contact_Location (City, Province, Street, Number, Postal_code, Phone) VALUES
+-- Insert sample data for ContactLocation
+INSERT INTO ContactLocation (City, Province, Street, Number, Postalcode, Phone) VALUES
 ('Rabat', 'Rabat-Salé-Kénitra', 'Avenue Hassan II', '45', '10000', '0537123456'),
 ('Casablanca', 'Casablanca-Settat', 'Boulevard Mohammed V', '123', '20000', '0522987654'),
 ('Rabat', 'Rabat-Salé-Kénitra', 'Rue Oued Zem', '67', '10100', '0537654321'),
@@ -21,7 +21,7 @@ INSERT INTO Have (CLID, IID) VALUES
 (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6);
 
 -- Insert sample data for Insurance
-INSERT INTO Insurance (Ins_type) VALUES
+INSERT INTO Insurance (Type) VALUES
 ('CNOPS'), ('CNSS'), ('RAMED'), ('Amo'), ('private'), ('CNOPS');
 
 -- Insert sample data for Covers (linking patients to insurance)
@@ -40,7 +40,7 @@ INSERT INTO Staff (Name, Status) VALUES
 ('Nurse Fatima Bennis', 'Active');
 
 -- Insert sample data for Practioner
-INSERT INTO Practioner (STAFF_ID, License_Number, Specialty) VALUES
+INSERT INTO Practioner (STAFF_ID, LicenseNumber, Specialty) VALUES
 (1, 1001, 'Cardiology'),
 (2, 1002, 'Pediatrics'),
 (4, 1004, 'Dermatology'),
@@ -76,57 +76,57 @@ INSERT INTO Department (Name, Specialty, HID) VALUES
 INSERT INTO work_in (STAFF_ID, DEP_ID) VALUES
 (1, 1), (2, 3), (3, 2), (4, 4), (5, 3), (6, 1), (7, 2), (8, 6), (7, 5);
 
--- Insert sample data for Clinical_Activity
-INSERT INTO Clinical_Activity (occurred_at, IID, DEP_ID, STAFF_ID) VALUES
-('2024-01-15 09:00:00', 1, 1, 1),
-('2024-01-16 10:30:00', 2, 3, 2),
-('2024-01-17 14:15:00', 3, 2, 7),
-('2024-01-18 11:00:00', 4, 4, 4),
-('2024-01-19 16:45:00', 5, 1, 1),
-('2024-01-20 08:30:00', 6, 2, 7),
-('2024-02-01 13:00:00', 1, 2, 7),
-('2024-02-02 15:30:00', 2, 3, 2),
-('2024-02-03 10:00:00', 3, 4, 4),
-(NOW() + INTERVAL 1 DAY, 4, 1, 1),
-(NOW() + INTERVAL 3 DAY, 5, 3, 2),
-(NOW() + INTERVAL 5 DAY, 6, 2, 7),
-(NOW() + INTERVAL 10 DAY, 1, 4, 4),
-('2024-01-25 12:00:00', 2, 2, 7),
-('2024-01-26 17:30:00', 3, 2, 7),
-('2024-01-27 09:45:00', 4, 2, 7),
-('2024-01-28 14:20:00', 5, 2, 7),
+-- Insert sample data for ClinicalActivity
+INSERT INTO ClinicalActivity (Date, Time, IID, DEP_ID, STAFF_ID) VALUES
+('2024-01-15', '09:00:00', 1, 1, 1),
+('2024-01-16', '10:30:00', 2, 3, 2),
+('2024-01-17', '14:15:00', 3, 2, 7),
+('2024-01-18', '11:00:00', 4, 4, 4),
+('2024-01-19', '16:45:00', 5, 1, 1),
+('2024-01-20', '08:30:00', 6, 2, 7),
+('2024-02-01', '13:00:00', 1, 2, 7),
+('2024-02-02', '15:30:00', 2, 3, 2),
+('2024-02-03', '10:00:00', 3, 4, 4),
+(CURDATE() + INTERVAL 1 DAY, '09:00:00', 4, 1, 1),
+(CURDATE() + INTERVAL 3 DAY, '10:00:00', 5, 3, 2),
+(CURDATE() + INTERVAL 5 DAY, '11:00:00', 6, 2, 7),
+(CURDATE() + INTERVAL 10 DAY, '14:00:00', 1, 4, 4),
+('2024-01-25', '12:00:00', 2, 2, 7),
+('2024-01-26', '17:30:00', 3, 2, 7),
+('2024-01-27', '09:45:00', 4, 2, 7),
+('2024-01-28', '14:20:00', 5, 2, 7),
 -- Additional data for emergencies (Query 7)
-('2024-01-21 08:00:00', 1, 2, 7),
-('2024-01-21 09:15:00', 2, 2, 7),
-('2024-01-21 10:30:00', 3, 2, 7),
-('2024-01-21 11:45:00', 4, 2, 7),
-('2024-01-21 13:00:00', 5, 2, 7),
-('2024-01-22 08:30:00', 6, 2, 7),
-('2024-01-22 10:00:00', 1, 2, 7),
-('2024-01-22 11:30:00', 2, 2, 7),
-('2024-01-22 14:00:00', 3, 2, 7),
-('2024-01-22 16:30:00', 4, 2, 7),
-('2024-01-23 09:00:00', 5, 2, 7),
-('2024-01-23 10:30:00', 6, 2, 7),
-('2024-01-23 12:00:00', 1, 2, 7),
-('2024-01-23 15:00:00', 2, 2, 7),
-('2024-01-23 17:30:00', 3, 2, 7),
+('2024-01-21', '08:00:00', 1, 2, 7),
+('2024-01-21', '09:15:00', 2, 2, 7),
+('2024-01-21', '10:30:00', 3, 2, 7),
+('2024-01-21', '11:45:00', 4, 2, 7),
+('2024-01-21', '13:00:00', 5, 2, 7),
+('2024-01-22', '08:30:00', 6, 2, 7),
+('2024-01-22', '10:00:00', 1, 2, 7),
+('2024-01-22', '11:30:00', 2, 2, 7),
+('2024-01-22', '14:00:00', 3, 2, 7),
+('2024-01-22', '16:30:00', 4, 2, 7),
+('2024-01-23', '09:00:00', 5, 2, 7),
+('2024-01-23', '10:30:00', 6, 2, 7),
+('2024-01-23', '12:00:00', 1, 2, 7),
+('2024-01-23', '15:00:00', 2, 2, 7),
+('2024-01-23', '17:30:00', 3, 2, 7),
 -- Recent emergency visits for Query 17
-(NOW() - INTERVAL 5 DAY, 1, 2, 7),
-(NOW() - INTERVAL 3 DAY, 1, 2, 7),
-(NOW() - INTERVAL 7 DAY, 2, 2, 7),
-(NOW() - INTERVAL 2 DAY, 2, 2, 7),
+(CURDATE() - INTERVAL 5 DAY, '10:00:00', 1, 2, 7),
+(CURDATE() - INTERVAL 3 DAY, '11:00:00', 1, 2, 7),
+(CURDATE() - INTERVAL 7 DAY, '09:00:00', 2, 2, 7),
+(CURDATE() - INTERVAL 2 DAY, '14:00:00', 2, 2, 7),
 -- Completed appointments for Query 18
-(NOW() - INTERVAL 30 DAY, 1, 1, 1),
-(NOW() - INTERVAL 45 DAY, 2, 3, 2),
-(NOW() - INTERVAL 60 DAY, 3, 4, 4),
-(NOW() - INTERVAL 15 DAY, 4, 1, 1),
-(NOW() - INTERVAL 75 DAY, 5, 3, 2),
-(NOW() - INTERVAL 20 DAY, 6, 2, 7),
-(NOW() - INTERVAL 10 DAY, 1, 3, 2),
-(NOW() - INTERVAL 25 DAY, 2, 1, 1),
-(NOW() - INTERVAL 50 DAY, 3, 2, 7),
-(NOW() - INTERVAL 35 DAY, 4, 4, 4);
+(CURDATE() - INTERVAL 30 DAY, '10:00:00', 1, 1, 1),
+(CURDATE() - INTERVAL 45 DAY, '11:00:00', 2, 3, 2),
+(CURDATE() - INTERVAL 60 DAY, '09:00:00', 3, 4, 4),
+(CURDATE() - INTERVAL 15 DAY, '14:00:00', 4, 1, 1),
+(CURDATE() - INTERVAL 75 DAY, '10:00:00', 5, 3, 2),
+(CURDATE() - INTERVAL 20 DAY, '11:00:00', 6, 2, 7),
+(CURDATE() - INTERVAL 10 DAY, '09:00:00', 1, 3, 2),
+(CURDATE() - INTERVAL 25 DAY, '14:00:00', 2, 1, 1),
+(CURDATE() - INTERVAL 50 DAY, '10:00:00', 3, 2, 7),
+(CURDATE() - INTERVAL 35 DAY, '11:00:00', 4, 4, 4);
 
 -- Insert sample data for Appointment
 INSERT INTO Appointment (CAID, Status, Reason) VALUES
@@ -151,7 +151,7 @@ INSERT INTO Appointment (CAID, Status, Reason) VALUES
 (46, 'Completed', 'Skin treatment');
 
 -- Insert sample data for Emergency
-INSERT INTO Emergency (CAID, Triage_Level, Outcome) VALUES
+INSERT INTO Emergency (CAID, TriageLevel, Outcome) VALUES
 (3, 'Urgent', 'Admitted'),
 (6, 'Moderate', 'Discharged'),
 (7, 'Critical', 'Transferred to ICU'),
@@ -184,12 +184,12 @@ INSERT INTO Emergency (CAID, Triage_Level, Outcome) VALUES
 (36, 'Urgent', 'Admitted');
 
 -- Insert sample data for Prescription
-INSERT INTO Prescription (Date_Issued, CAID) VALUES
-('2024-01-15', 1),
-('2024-01-16', 2),
-('2024-01-17', 3),
-('2024-01-18', 4),
-('2024-01-19', 5);
+INSERT INTO Prescription (Date, Time, CAID) VALUES
+('2024-01-15', '09:30:00', 1),
+('2024-01-16', '10:45:00', 2),
+('2024-01-17', '14:30:00', 3),
+('2024-01-18', '11:15:00', 4),
+('2024-01-19', '17:00:00', 5);
 
 -- Insert sample data for Expense
 INSERT INTO Expense (InsID, CAID, Total) VALUES
@@ -202,7 +202,7 @@ INSERT INTO Expense (InsID, CAID, Total) VALUES
 (2, 7, 2200.00);
 
 -- Insert sample data for Medication
-INSERT INTO Medication (Class, Name, Form, Strength, Active_Ingredient, Manufacturer) VALUES
+INSERT INTO Medication (Class, Name, Form, Strength, ActiveIngredient, Manufacturer) VALUES
 ('Antibiotic', 'Amoxicillin', 'Tablet', '500mg', 'Amoxicillin', 'PharmaMaroc'),
 ('Antibiotic', 'Ciprofloxacin', 'Tablet', '250mg', 'Ciprofloxacin', 'Laboratoires SNA'),
 ('Analgesic', 'Paracetamol', 'Tablet', '1000mg', 'Paracetamol', 'PharmaCare'),
@@ -212,7 +212,7 @@ INSERT INTO Medication (Class, Name, Form, Strength, Active_Ingredient, Manufact
 ('Anticoagulant', 'Warfarin', 'Tablet', '5mg', 'Warfarin', 'Laboratoires SNA');
 
 -- Insert sample data for Stock
-INSERT INTO Stock (HID, DrugID, Unit_Price, Stock_Timestamp, Quantity, Reorder_Level) VALUES
+INSERT INTO Stock (HID, Drug_ID, UnitPrice, StockTimestamp, Qty, ReorderLevel) VALUES
 (1, 1, 200.00, NOW(), 150, 50),  -- High price for spread
 (1, 2, 85.25, NOW(), 75, 30),
 (1, 3, 180.00, NOW(), 300, 100), -- High price for spread
@@ -240,7 +240,7 @@ INSERT INTO Stock (HID, DrugID, Unit_Price, Stock_Timestamp, Quantity, Reorder_L
 (4, 4, -1.50, NOW(), -5, 10);    -- Both negative price and quantity
 
 -- Insert sample data for include (prescription details)
-INSERT INTO include (PID, DrugID, dosage, duration) VALUES
+INSERT INTO include (PID, Drug_ID, dosage, duration) VALUES
 (1, 1, '1 tablet 3 times daily', 7),
 (1, 3, '1 tablet as needed', 5),
 (2, 2, '1 tablet twice daily', 10),
@@ -249,21 +249,30 @@ INSERT INTO include (PID, DrugID, dosage, duration) VALUES
 (4, 4, '1 tablet daily', 30),
 (5, 5, '1 tablet twice daily', 90);
 
+-- Add email to patients
+UPDATE Patient SET email = 'ahmed.benali@email.com' WHERE IID = 1;
+UPDATE Patient SET email = 'fatima.zahra@email.com' WHERE IID = 2;
+UPDATE Patient SET email = 'mohammed.alami@email.com' WHERE IID = 3;
+UPDATE Patient SET email = 'amina.toumi@email.com' WHERE IID = 4;
+UPDATE Patient SET email = 'youssef.kassi@email.com' WHERE IID = 5;
+UPDATE Patient SET email = 'leila.mansouri@email.com' WHERE IID = 6;
 
-
+-- Update phone format
 UPDATE Patient
 SET Phone = '+212-699-123456'
 WHERE CIN = 'AB123456';
 
+-- Update hospital region
 UPDATE Hospital
 SET Region = 'Marrakech-Safi'
 WHERE HID=1;
 
-UPDATE Clinical_Activity
-SET occurred_at =Now()- INTERVAL 3 DAY
+-- Update clinical activity date
+UPDATE ClinicalActivity
+SET Date = CURDATE() - INTERVAL 3 DAY
 WHERE CAID=4;
 
-
+-- Delete cancelled appointments (if any exist)
 DELETE FROM Appointment
 WHERE Status = 'Cancelled'
 LIMIT 1;
