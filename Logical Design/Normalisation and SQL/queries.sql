@@ -187,15 +187,14 @@ JOIN CityAvg ca
 
 
 -- Query 16
-select P.IID,
+select C.IID,
   MIN(C.occurred_at)
-from Patient P,
-  Clinical_Activity C,
-  Appointment A
-WHERE P.IID = C.IID
-  and A.caid = C.caid
+from 
+  Clinical_Activity C join Appointment A on A.caid = C.caid
+WHERE 
+  A.status = "Scheduled"
   and C.occurred_at > CURRENT_DATE
-GROUP BY P.IID;
+GROUP BY C.IID;
 
 
 
