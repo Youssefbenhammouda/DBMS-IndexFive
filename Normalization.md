@@ -328,20 +328,20 @@ Dependency preservation is naturally ensured.
 
 Each stock record is timestamped:
 
-{HID, Drug ID, Stockimestamp} → UnitPrice, StockRemaining, Qty, ReorderLevel
+{HID, Drug_ID, StockTimestamp} → UnitPrice, StockRemaining, Qty, ReorderLevel
 
 By transitivity:
 
-{HID, Drug ID, StockTimestamp} → (Hospital attributes),(Medication attributes)
+{HID, Drug_ID, StockTimestamp} → (Hospital attributes),(Medication attributes)
 
 
 
-**Candidate keys:** `{HID,Drug_ID,Stockimestamp}`
+**Candidate keys:** `{HID,Drug_ID,StockTimestamp}`
 
 
 **BCNF validation:**
 
-{HID, Drug ID, StockTimestamp} is a superkey → satisfies BCNF.
+{HID, Drug_ID, StockTimestamp} is a superkey → satisfies BCNF.
 
 
 **Lossless Join:**
