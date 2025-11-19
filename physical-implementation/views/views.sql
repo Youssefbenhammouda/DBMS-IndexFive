@@ -15,4 +15,4 @@ MAX(S.StockTimestamp) as LastStockTimestamp
 FROM Stock S
 JOIN Hospital H ON H.HID=S.HID
 JOIN Medication M ON S.Drug_ID=M.Drug_ID
-GROUP BY S.HID,H.Name,S.MID,M.Name;
+GROUP BY S.HID,H.Name,S.Drug_ID,M.Name;
