@@ -7,3 +7,12 @@ JOIN `Hospital` H ON H.`HID` = D.`HID`
 WHERE A.`Status` = 'Scheduled' AND (C.`Date` BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(),INTERVAL 14 DAY))
 GROUP BY H.`HID`,C.`Date`
 ;
+
+
+CREATE OR REPLACE VIEW DrugPricingSummary AS
+SELECT S.HID as HID ,H.Name as HospitalName,S.Drug_ID as Drug_ID,M.Name as MedicationName,AVG(S.UnitPrice) as AvgUnitPrice,MIN(S.UnitPrice) as MinUnitPrice,MAX(S.UnitPrice) as MaxUnitPrice,
+MAX(S.StockTimestamp) as LastStockTimestamp
+FROM Stock S
+JOIN Hospital ON H.HID=S.HID
+JOIN Medication M ON S.Drug_ID=M.Drug_ID
+GROUP BY S.HID,H.Name,S.Drug_ID,M.Name;
