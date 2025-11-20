@@ -49,19 +49,20 @@ END $$
 -- 2. Recompute Expense.Total when prescription lines change.
 
 	
-DELIMITER $$
+
 
 CREATE TRIGGER trg_iclude_after_insert
 AFTER INSERT ON include
 FOR EACH ROW
 BEGIN 
+    
 	
 END $$
-DELIMITER;
+
 	
 
 
-DELIMITER $$
+
 
 CREATE TRIGGER trg_iclude_after_update
 AFTER UPDATE ON include
@@ -69,12 +70,7 @@ FOR EACH ROW
 BEGIN 
 	
 END $$
-DELIMITER;
 
-
-
-
-DELIMITER $$
 
 CREATE TRIGGER trg_iclude_after_delete
 AFTER DELETE ON include
@@ -82,7 +78,7 @@ FOR EACH ROW
 BEGIN 
 	
 END $$
-DELIMITER;
+
 	
 
 

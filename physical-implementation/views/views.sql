@@ -1,4 +1,4 @@
-CREATE VIEW UpcomingByHospital AS
+CREATE OR REPLACE VIEW UpcomingByHospital AS
 SELECT H.`Name` as HospitalName, C.`Date` as ApptDate, count(C.`CAID`) FROM `Appointment` A
 JOIN  `ClinicalActivity` C ON C.`CAID` = A.`CAID`
 JOIN `Department` D ON D.`DEP_ID` = C.`DEP_ID`
