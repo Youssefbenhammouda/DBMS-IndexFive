@@ -50,7 +50,6 @@ END $$
 
 	
 
-
 CREATE TRIGGER trg_iclude_after_insert
 AFTER INSERT ON include
 FOR EACH ROW
