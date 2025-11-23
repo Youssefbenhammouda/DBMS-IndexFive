@@ -99,19 +99,4 @@ BEGIN
 
 END $$
 
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 DELIMITER ;
