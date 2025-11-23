@@ -46,36 +46,57 @@ END $$
 
 
 	
--- 2. Recompute Expense.Total when prescription lines change.
+-- 3.Prevent negative or inconsistent stock.
 
 	
 
-CREATE TRIGGER trg_iclude_after_insert
-AFTER INSERT ON include
+CREATE TRIGGER trg_stock_before_insert
+AFTER INSERT ON Stock
 FOR EACH ROW
-BEGIN 
-    
 	
+BEGIN 
+	
+   IF NEW.Qty<0 THEN
+	  SIGNAL SQLSTATE '45000'
+	  SET MESSAGE_TEXT='Qty cannot be negative'
+   END IF;
+
+   IF NEW.UnitPrice<=0 THEN
+	  SIGNAL SQLSTATE '45000'
+	  SET MESSAGE_TEXT='UnitPrice should be > 0 '
+   END IF;
+
+   IF NEW.ReorderLevel<0 THEN
+	  SIGNAL SQLSTATE '45000'
+	  SET MESSAGE_TEXT='ReorderLevel cannot be negative'
+   END IF;
+
 END $$
 
+
+
 	
-
-
-
-
-CREATE TRIGGER trg_iclude_after_update
-AFTER UPDATE ON include
+CREATE TRIGGER trg_stock_before_update
+AFTER UPDATE ON Stock
 FOR EACH ROW
+	
 BEGIN 
 	
-END $$
+	IF NEW.Qty<0 THEN
+	  SIGNAL SQLSTATE '45000'
+	  SET MESSAGE_TEXT='Qty cannot be negative'
+   END IF;
 
+   IF NEW.UnitPrice<=0 THEN
+	  SIGNAL SQLSTATE '45000'
+	  SET MESSAGE_TEXT='UnitPrice should be > 0 '
+   END IF;
 
-CREATE TRIGGER trg_iclude_after_delete
-AFTER DELETE ON include
-FOR EACH ROW
-BEGIN 
-	
+   IF NEW.ReorderLevel<0 THEN
+	  SIGNAL SQLSTATE '45000'
+	  SET MESSAGE_TEXT='ReorderLevel cannot be negative'
+   END IF;
+
 END $$
 
 	
