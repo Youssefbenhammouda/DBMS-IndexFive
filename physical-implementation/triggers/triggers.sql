@@ -58,17 +58,17 @@ BEGIN
 	
    IF NEW.Qty<0 THEN
 	  SIGNAL SQLSTATE '45000'
-	  SET MESSAGE_TEXT='Qty cannot be negative'
+	  SET MESSAGE_TEXT='Qty cannot be negative';
    END IF;
 
    IF NEW.UnitPrice<=0 THEN
 	  SIGNAL SQLSTATE '45000'
-	  SET MESSAGE_TEXT='UnitPrice should be > 0 '
+	  SET MESSAGE_TEXT='UnitPrice must be > 0 ';
    END IF;
 
    IF NEW.ReorderLevel<0 THEN
 	  SIGNAL SQLSTATE '45000'
-	  SET MESSAGE_TEXT='ReorderLevel cannot be negative'
+	  SET MESSAGE_TEXT='ReorderLevel cannot be negative';
    END IF;
 
 END $$
@@ -84,17 +84,17 @@ BEGIN
 	
 	IF NEW.Qty<0 THEN
 	  SIGNAL SQLSTATE '45000'
-	  SET MESSAGE_TEXT='Qty cannot be negative'
+	  SET MESSAGE_TEXT='Qty cannot be negative';
    END IF;
 
    IF NEW.UnitPrice<=0 THEN
 	  SIGNAL SQLSTATE '45000'
-	  SET MESSAGE_TEXT='UnitPrice should be > 0 '
+	  SET MESSAGE_TEXT='UnitPrice must be > 0 ';
    END IF;
 
    IF NEW.ReorderLevel<0 THEN
 	  SIGNAL SQLSTATE '45000'
-	  SET MESSAGE_TEXT='ReorderLevel cannot be negative'
+	  SET MESSAGE_TEXT='ReorderLevel cannot be negative';
    END IF;
 
 END $$
