@@ -1,0 +1,19 @@
+<h1>Staff Share of Appointments</h1>
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Staff ID</th>
+        <th>Hospital ID</th>
+        <th>Total Appointments</th>
+        <th>Percentage Share (%)</th>
+    </tr>
+
+    {% for r in rows %}
+    <tr>
+        <td>{{ r.staff_id }}</td>
+        <td>{{ r.HID }}</td>
+        <td>{{ r.Total_Appointments }}</td>
+        <td>{{ "%.2f" | format(r.PercentageShare) }}</td>
+    </tr>
+    {% endfor %}
+</table>
