@@ -1,3 +1,7 @@
+# Custom
+.env
+__pycache__
+mnhs_dashboard_requirements.md
 # Core LaTeX auxiliary files
 *.aux
 *.lof

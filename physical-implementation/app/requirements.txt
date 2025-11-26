@@ -1,0 +1,6 @@
+aiomysql==0.3.2
+fastapi[standard]==0.122.0
+mysql-connector-python==9.5.0
+python-dotenv==1.2.1
+pydantic==2.12.5
+cryptography==46.0.3
