@@ -46,3 +46,40 @@ FROM staff S
     JOIN Appointment A ON A.CAID = CA.CAID
 WHERE CA.DATE BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
 GROUP BY S.STAFF_ID, S.Name;
+
+-- view 4
+CREATE VIEW PatientNextVisit AS
+WITH NextVisit AS (
+    SELECT
+        p.IID,
+        p.Name AS FullName,
+        ca.occurred_at AS NextApptDate,
+        d.Name AS DepartmentName,
+        h.Name AS HospitalName,
+        h.City AS City,
+        ROW_NUMBER() OVER (
+            PARTITION BY p.IID
+            ORDER BY ca.occurred_at
+        ) AS rownum
+    FROM Patient p
+    JOIN Clinical_Activity ca
+        ON ca.IID = p.IID
+    JOIN Appointment a
+        ON a.CAID = ca.CAID
+    JOIN Department d
+        ON d.DEP_ID = ca.DEP_ID
+    JOIN Hospital h
+        ON h.HID = d.HID
+    WHERE
+        a.Status = 'Scheduled'
+        AND ca.occurred_at > CURDATE()
+)
+SELECT
+    IID,
+    FullName,
+    NextApptDate,
+    DepartmentName,
+    HospitalName,
+    City
+FROM NextVisit
+WHERE rownum = 1;
