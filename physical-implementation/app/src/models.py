@@ -45,7 +45,6 @@ AppointmentStatus = Literal["Scheduled", "Completed", "Cancelled"]
 class QueryCoreDashboardStats(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     date_range: Optional[str] = Field(default=None, alias="range")
-    page_key: Literal["Overview"] = Field("Overview", alias="pageKey")
 
     @field_validator("date_range")
     @classmethod

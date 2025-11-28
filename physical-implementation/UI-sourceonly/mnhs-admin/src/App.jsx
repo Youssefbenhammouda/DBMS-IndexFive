@@ -18,6 +18,8 @@ import AppointmentsView from "./views/AppointmentsView";
 import StaffView from "./views/StaffView";
 import SidebarItem from "./components/navigation/SidebarItem";
 import BackendConnector from "./services/backendConnector";
+import PatientConnector from "./services/patientConnector";
+import { registerPatientMockServer } from "./data/patientMockServer";
 import { ModelConnector } from "./models/modelConnector";
 import { registerCoreModels } from "./models/pageModelRegistry";
 
@@ -34,13 +36,19 @@ export default function MNHSAdmin() {
     return (configuredBaseUrl && configuredBaseUrl.trim()) || "http://127.0.0.1:8000/api";
   }, []);
 
-  const backendConnector = useMemo(() => new BackendConnector({ baseUrl: apiBaseUrl }), [apiBaseUrl]);
+  const backendConnector = useMemo(() => {
+    const connector = new BackendConnector({ baseUrl: apiBaseUrl });
+    registerPatientMockServer(connector);
+    return connector;
+  }, [apiBaseUrl]);
 
   const modelConnector = useMemo(() => {
     const connector = new ModelConnector(backendConnector);
     registerCoreModels(connector);
     return connector;
   }, [backendConnector]);
+
+  const patientConnector = useMemo(() => new PatientConnector(backendConnector, modelConnector), [backendConnector, modelConnector]);
 
   const loadPageData = useCallback(
     async (pageKey) => {
@@ -100,7 +108,7 @@ export default function MNHSAdmin() {
       case "Overview":
           return <OverviewView data={dataForPage} error={errorForPage} onNavigate={setActivePage} />;
       case "Patients":
-        return <PatientsView data={dataForPage} />;
+        return <PatientsView data={dataForPage} error={errorForPage} patientConnector={patientConnector} />;
       case "Appointments":
         return <AppointmentsView data={dataForPage} />;
       case "Staff":

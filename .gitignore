@@ -4,6 +4,7 @@ __pycache__
 mnhs_dashboard_requirements.md
 .venv
 .vscode
+
 # Core LaTeX auxiliary files
 *.aux
 *.lof

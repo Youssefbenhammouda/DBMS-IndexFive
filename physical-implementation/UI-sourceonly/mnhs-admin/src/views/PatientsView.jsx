@@ -1,20 +1,174 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
+import Modal from "../components/common/Modal";
 
-const PatientsView = ({ data }) => {
+const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+const INITIAL_FORM_STATE = {
+  iid: "",
+  cin: "",
+  fullName: "",
+  birth: "",
+  sex: "M",
+  bloodGroup: "",
+  phone: "",
+  email: "",
+};
+
+const PatientsView = ({ data, error, patientConnector }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patients, setPatients] = useState(() => data?.patients ?? []);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formValues, setFormValues] = useState(INITIAL_FORM_STATE);
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [banner, setBanner] = useState(null);
+
+  useEffect(() => {
+    if (Array.isArray(data?.patients)) {
+      setPatients(data.patients);
+      if (!selectedPatient && data.patients.length) {
+        setSelectedPatient(data.patients[0]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  useEffect(() => {
+    if (selectedPatient && !patients.some((p) => p.iid === selectedPatient.iid)) {
+      setSelectedPatient(patients[0] ?? null);
+    }
+  }, [patients, selectedPatient]);
+
+  useEffect(() => {
+    if (error) {
+      setBanner({ type: "error", message: error, id: Date.now() });
+    }
+  }, [error]);
+
+  const showBanner = (type, message) => {
+    setBanner({ type, message, id: Date.now() });
+  };
+
+  const handleOpenModal = () => {
+    setFormValues(INITIAL_FORM_STATE);
+    setFormErrors({});
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleInputChange = (field) => (event) => {
+    const value = event.target.value;
+    setFormValues((prev) => ({
+      ...prev,
+      [field]: field === "cin" ? value.toUpperCase() : value,
+    }));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const trimmedIID = formValues.iid.trim();
+    const trimmedName = formValues.fullName.trim();
+    const trimmedPhone = formValues.phone.trim();
+    const trimmedEmail = formValues.email.trim();
+    const normalizedCIN = formValues.cin.trim().toUpperCase();
+
+    if (!trimmedIID) errors.iid = "IID is required";
+    else if (!/^\d+$/.test(trimmedIID)) errors.iid = "IID must be numeric";
+    else if (patients.some((p) => String(p.iid).toUpperCase() === trimmedIID.toUpperCase())) errors.iid = "IID already exists";
+
+    if (!normalizedCIN) errors.cin = "CIN is required";
+    else if (normalizedCIN.length > 10) errors.cin = "Max length is 10";
+    else if (patients.some((p) => p.cin?.toUpperCase() === normalizedCIN)) errors.cin = "CIN already exists";
+
+    if (!trimmedName) errors.fullName = "Full name is required";
+
+    if (!formValues.sex) errors.sex = "Sex is required";
+
+    if (formValues.bloodGroup && !BLOOD_GROUP_OPTIONS.includes(formValues.bloodGroup)) {
+      errors.bloodGroup = "Invalid blood group";
+    }
+
+    if (trimmedPhone && !/^\+?[0-9\s-]{6,15}$/.test(trimmedPhone)) {
+      errors.phone = "Invalid phone";
+    }
+
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errors.email = "Invalid email";
+    }
+
+    return { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail };
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail } = validateForm();
+    if (Object.keys(errors).length) {
+      setFormErrors(errors);
+      return;
+    }
+
+    if (!patientConnector) {
+      showBanner("error", "Patient connector not available. Please reload and try again.");
+      return;
+    }
+
+    const requestPayload = {
+      iid: Number(trimmedIID),
+      cin: normalizedCIN,
+      name: trimmedName,
+      birth: formValues.birth || null,
+      sex: formValues.sex,
+      bloodGroup: formValues.bloodGroup || null,
+      phone: trimmedPhone || null,
+      email: trimmedEmail || null,
+    };
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await patientConnector.addPatient(requestPayload);
+      const created = response?.patient || requestPayload;
+      const normalized = {
+        iid: created.iid ?? trimmedIID,
+        cin: created.cin ?? normalizedCIN,
+        name: created.name ?? trimmedName,
+        sex: created.sex ?? formValues.sex,
+        birthDate: created.birthDate || created.birth || formValues.birth || "Not specified",
+        city: created.city || "N/A",
+        insurance: created.insurance || "None",
+        status: created.status || "Outpatient",
+        bloodGroup: created.bloodGroup || requestPayload.bloodGroup,
+        phone: created.phone || requestPayload.phone,
+        email: created.email || requestPayload.email,
+      };
+
+      setPatients((prev) => [normalized, ...prev]);
+      setSelectedPatient(normalized);
+      setFormValues(INITIAL_FORM_STATE);
+      setFormErrors({});
+      setIsModalOpen(false);
+      showBanner("success", response?.message || "Patient added successfully.");
+    } catch (apiError) {
+      showBanner("error", apiError?.message || "Failed to add patient. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filtered = useMemo(
     () =>
-      data.patients.filter(
+      patients.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.cin.toLowerCase().includes(searchTerm.toLowerCase())
+          (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (p.cin || "").toLowerCase().includes(searchTerm.toLowerCase())
       ),
-    [data.patients, searchTerm]
+    [patients, searchTerm]
   );
 
   return (
@@ -31,10 +185,25 @@ const PatientsView = ({ data }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors">
+          <button
+            onClick={handleOpenModal}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
             <Plus className="w-4 h-4" /> New Patient
           </button>
         </div>
+
+        {banner && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              banner.type === "error"
+                ? "bg-red-50 border-red-200 text-red-700"
+                : "bg-green-50 border-emerald-200 text-emerald-700"
+            }`}
+          >
+            {banner.message}
+          </div>
+        )}
 
         <Card className="flex-1 overflow-hidden p-0">
           <div className="overflow-y-auto h-full">
@@ -107,8 +276,22 @@ const PatientsView = ({ data }) => {
                     <span className="font-medium text-slate-800 dark:text-slate-200">{selectedPatient.birthDate}</span>
                   </div>
                   <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Blood Group</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">
+                      {selectedPatient.bloodGroup || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
                     <span className="text-slate-500">City</span>
                     <span className="font-medium text-slate-800 dark:text-slate-200">{selectedPatient.city}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Phone</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">{selectedPatient.phone || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Email</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">{selectedPatient.email || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -145,6 +328,148 @@ const PatientsView = ({ data }) => {
           </Card>
         </div>
       )}
+
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add New Patient">
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IID *</label>
+              <input
+                type="text"
+                value={formValues.iid}
+                onChange={handleInputChange("iid")}
+                placeholder="Numeric identifier"
+                maxLength={10}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  formErrors.iid ? "border-red-500" : ""
+                }`}
+              />
+              {formErrors.iid && <p className="text-xs text-red-500 mt-1">{formErrors.iid}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CIN *</label>
+              <input
+                type="text"
+                value={formValues.cin}
+                onChange={handleInputChange("cin")}
+                placeholder="National ID"
+                maxLength={10}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 uppercase ${
+                  formErrors.cin ? "border-red-500" : ""
+                }`}
+              />
+              {formErrors.cin && <p className="text-xs text-red-500 mt-1">{formErrors.cin}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
+            <input
+              type="text"
+              value={formValues.fullName}
+              onChange={handleInputChange("fullName")}
+              placeholder="Patient full name"
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                formErrors.fullName ? "border-red-500" : ""
+              }`}
+            />
+            {formErrors.fullName && <p className="text-xs text-red-500 mt-1">{formErrors.fullName}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Birth Date</label>
+              <input
+                type="date"
+                value={formValues.birth}
+                onChange={handleInputChange("birth")}
+                className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Sex *</label>
+              <select
+                value={formValues.sex}
+                onChange={handleInputChange("sex")}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  formErrors.sex ? "border-red-500" : ""
+                }`}
+              >
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+              {formErrors.sex && <p className="text-xs text-red-500 mt-1">{formErrors.sex}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Blood Group</label>
+              <select
+                value={formValues.bloodGroup}
+                onChange={handleInputChange("bloodGroup")}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  formErrors.bloodGroup ? "border-red-500" : ""
+                }`}
+              >
+                <option value="">Select blood group</option>
+                {BLOOD_GROUP_OPTIONS.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+              {formErrors.bloodGroup && <p className="text-xs text-red-500 mt-1">{formErrors.bloodGroup}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone</label>
+              <input
+                type="tel"
+                value={formValues.phone}
+                onChange={handleInputChange("phone")}
+                placeholder="+212 600-000000"
+                maxLength={15}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  formErrors.phone ? "border-red-500" : ""
+                }`}
+              />
+              {formErrors.phone && <p className="text-xs text-red-500 mt-1">{formErrors.phone}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+            <input
+              type="email"
+              value={formValues.email}
+              onChange={handleInputChange("email")}
+              placeholder="patient@example.com"
+              maxLength={160}
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                formErrors.email ? "border-red-500" : ""
+              }`}
+            />
+            {formErrors.email && <p className="text-xs text-red-500 mt-1">{formErrors.email}</p>}
+          </div>
+
+          <p className="text-xs text-slate-500">Fields marked with * are required.</p>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-slate-600 font-medium">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-4 py-2 rounded-lg font-medium text-white ${
+                isSubmitting ? "bg-teal-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"
+              }`}
+            >
+              {isSubmitting ? "Saving..." : "Save Patient"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

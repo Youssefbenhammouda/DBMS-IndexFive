@@ -49,12 +49,48 @@ const buildOverviewModel = (payload) => {
   };
 };
 
+const PATIENTS_MODEL_CONTRACT = {
+  requiredKeys: ["patients"],
+  validators: {
+    patients: Array.isArray,
+    lastSyncedAt: (value) => value === undefined || value === null || typeof value === "string",
+  },
+};
+
+const normalizePatientRecord = (patient, index) => ({
+  iid: patient.iid ?? `P-${1000 + index}`,
+  cin: patient.cin ?? "UNKNOWN",
+  name: patient.name ?? "Unknown Patient",
+  sex: patient.sex === "F" ? "F" : "M",
+  birthDate: patient.birthDate || patient.birth || "Unknown",
+  bloodGroup: patient.bloodGroup || null,
+  phone: patient.phone || null,
+  email: patient.email || null,
+  city: patient.city || "N/A",
+  insurance: patient.insurance || "None",
+  status: patient.status || "Outpatient",
+});
+
+const buildPatientsModel = (payload = {}) => {
+  const list = Array.isArray(payload.patients) ? payload.patients : [];
+  return {
+    patients: list.map(normalizePatientRecord),
+    lastSyncedAt: payload.lastSyncedAt || null,
+  };
+};
+
 const registerCoreModels = (modelConnector) => {
   modelConnector.registerModel("Overview", {
     resource: "core-dashboard",
     contract: OVERVIEW_MODEL_CONTRACT,
     transform: buildOverviewModel,
   });
+
+  modelConnector.registerModel("Patients", {
+    resource: "patients",
+    contract: PATIENTS_MODEL_CONTRACT,
+    transform: buildPatientsModel,
+  });
 };
 
-export { OVERVIEW_MODEL_CONTRACT, registerCoreModels };
+export { OVERVIEW_MODEL_CONTRACT, PATIENTS_MODEL_CONTRACT, registerCoreModels };

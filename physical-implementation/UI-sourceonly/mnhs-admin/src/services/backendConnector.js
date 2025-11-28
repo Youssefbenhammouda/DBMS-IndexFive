@@ -12,35 +12,53 @@ class BackendConnector {
     this.resourceResolvers = new Map();
   }
 
-  registerResource(resourceKey, resolver) {
+  buildResolverKey(resourceKey, method = "GET") {
+    return `${method.toUpperCase()}::${resourceKey}`;
+  }
+
+  registerResource(resourceKey, resolver, { method = "GET" } = {}) {
     if (!resourceKey || typeof resolver !== "function") {
       throw new Error("registerResource expects a key and resolver function");
     }
-    this.resourceResolvers.set(resourceKey, resolver);
-    return () => this.resourceResolvers.delete(resourceKey);
+    const resolverKey = this.buildResolverKey(resourceKey, method);
+    this.resourceResolvers.set(resolverKey, resolver);
+    return () => this.resourceResolvers.delete(resolverKey);
   }
 
-  async get(resourceKey, params = {}) {
-    if (!resourceKey) throw new Error("resourceKey is required");
+  getResolver(resourceKey, method = "GET") {
+    return this.resourceResolvers.get(this.buildResolverKey(resourceKey, method));
+  }
 
-    if (this.resourceResolvers.has(resourceKey)) {
-      return this.resourceResolvers.get(resourceKey)(params);
-    }
-
-    if (!this.fetchImpl) {
-      throw new Error(`No resolver or fetch implementation available for ${resourceKey}`);
-    }
-
-    const query = new URLSearchParams(
+  buildQueryString(params = {}) {
+    return new URLSearchParams(
       Object.entries(params).reduce((acc, [key, value]) => {
         if (value === undefined || value === null) return acc;
         acc[key] = value;
         return acc;
       }, {}),
     ).toString();
+  }
 
+  async request(method, resourceKey, { params = {}, body } = {}) {
+    if (!resourceKey) throw new Error("resourceKey is required");
+
+    const resolver = this.getResolver(resourceKey, method);
+    if (resolver) {
+      return resolver(params, body);
+    }
+
+    if (!this.fetchImpl) {
+      throw new Error(`No resolver or fetch implementation available for ${resourceKey}`);
+    }
+
+    const query = this.buildQueryString(params);
     const url = `${this.baseUrl}/${resourceKey}${query ? `?${query}` : ""}`;
-    const response = await this.fetchImpl(url, { headers: { "Content-Type": "application/json" } });
+    const headers = { "Content-Type": "application/json" };
+    const response = await this.fetchImpl(url, {
+      method,
+      headers,
+      body: method === "GET" ? undefined : JSON.stringify(body ?? {}),
+    });
 
     const contentType = response.headers?.get?.("Content-Type") || "";
     const isJson = contentType.includes("application/json");
@@ -64,6 +82,14 @@ class BackendConnector {
     }
 
     return payload;
+  }
+
+  async get(resourceKey, params = {}) {
+    return this.request("GET", resourceKey, { params });
+  }
+
+  async post(resourceKey, body = {}, params = {}) {
+    return this.request("POST", resourceKey, { params, body });
   }
 }
 
