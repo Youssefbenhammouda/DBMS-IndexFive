@@ -16,10 +16,20 @@ import OverviewView from "./views/OverviewView";
 import PatientsView from "./views/PatientsView";
 import AppointmentsView from "./views/AppointmentsView";
 import StaffView from "./views/StaffView";
+import MedicationsView from "./views/MedicationsView";
+import BillingView from "./views/BillingView";
 import SidebarItem from "./components/navigation/SidebarItem";
 import BackendConnector from "./services/backendConnector";
 import PatientConnector from "./services/patientConnector";
+import AppointmentConnector from "./services/appointmentConnector";
+import StaffConnector from "./services/staffConnector";
+import MedicationsConnector from "./services/medicationsConnector";
+import BillingConnector from "./services/billingConnector";
 import { registerPatientMockServer } from "./data/patientMockServer";
+import { registerAppointmentMockServer } from "./data/appointmentMockServer";
+import { registerStaffMockServer } from "./data/staffMockServer";
+import { registerMedicationsMockServer } from "./data/medicationsMockServer";
+import { registerBillingMockServer } from "./data/billingMockServer";
 import { ModelConnector } from "./models/modelConnector";
 import { registerCoreModels } from "./models/pageModelRegistry";
 
@@ -39,6 +49,10 @@ export default function MNHSAdmin() {
   const backendConnector = useMemo(() => {
     const connector = new BackendConnector({ baseUrl: apiBaseUrl });
     registerPatientMockServer(connector);
+    registerAppointmentMockServer(connector);
+    registerStaffMockServer(connector);
+    registerMedicationsMockServer(connector);
+    registerBillingMockServer(connector);
     return connector;
   }, [apiBaseUrl]);
 
@@ -48,7 +62,30 @@ export default function MNHSAdmin() {
     return connector;
   }, [backendConnector]);
 
-  const patientConnector = useMemo(() => new PatientConnector(backendConnector, modelConnector), [backendConnector, modelConnector]);
+  const patientConnector = useMemo(
+    () => new PatientConnector(backendConnector, modelConnector),
+    [backendConnector, modelConnector],
+  );
+
+  const appointmentConnector = useMemo(
+    () => new AppointmentConnector(backendConnector, modelConnector),
+    [backendConnector, modelConnector],
+  );
+
+  const staffConnector = useMemo(
+    () => new StaffConnector(backendConnector, modelConnector),
+    [backendConnector, modelConnector],
+  );
+
+  const medicationsConnector = useMemo(
+    () => new MedicationsConnector(backendConnector, modelConnector),
+    [backendConnector, modelConnector],
+  );
+
+  const billingConnector = useMemo(
+    () => new BillingConnector(backendConnector, modelConnector),
+    [backendConnector, modelConnector],
+  );
 
   const loadPageData = useCallback(
     async (pageKey) => {
@@ -110,9 +147,25 @@ export default function MNHSAdmin() {
       case "Patients":
         return <PatientsView data={dataForPage} error={errorForPage} patientConnector={patientConnector} />;
       case "Appointments":
-        return <AppointmentsView data={dataForPage} />;
+        return (
+          <AppointmentsView
+            data={dataForPage}
+            error={errorForPage}
+            appointmentConnector={appointmentConnector}
+          />
+        );
       case "Staff":
-        return <StaffView data={dataForPage} />;
+        return <StaffView data={dataForPage} error={errorForPage} staffConnector={staffConnector} />;
+      case "Medications":
+        return (
+          <MedicationsView
+            data={dataForPage}
+            error={errorForPage}
+            medicationsConnector={medicationsConnector}
+          />
+        );
+      case "Billing":
+        return <BillingView data={dataForPage} error={errorForPage} billingConnector={billingConnector} />;
       default:
         return <div className="p-10 text-center text-slate-500">Module Under Construction</div>;
     }

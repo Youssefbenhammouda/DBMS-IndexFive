@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Calendar, Filter, Plus, Check, X } from "lucide-react";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
@@ -6,16 +6,35 @@ import Modal from "../components/common/Modal";
 
 const DEFAULT_HOSPITAL_OPTIONS = ["Rabat Central", "Casablanca General", "Marrakech Health", "Tangier Med"];
 
-const AppointmentsView = ({ data }) => {
+const AppointmentsView = ({ data, error, appointmentConnector }) => {
   const [viewMode, setViewMode] = useState("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [banner, setBanner] = useState(null);
+
+  useEffect(() => {
+    if (error) {
+      setBanner({ type: "error", message: error, id: Date.now() });
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (!appointmentConnector) {
+      setBanner((current) =>
+        current?.type === "error"
+          ? current
+          : { type: "error", message: "Appointment connector unavailable. Please refresh.", id: Date.now() },
+      );
+    }
+  }, [appointmentConnector]);
+
+  const appointments = useMemo(() => (Array.isArray(data?.appointments) ? data.appointments : []), [data]);
 
   const hospitalOptions = useMemo(() => {
-    const fromData = Array.isArray(data?.appointments)
-      ? Array.from(new Set(data.appointments.map((apt) => apt.hospital).filter(Boolean)))
+    const fromData = appointments.length
+      ? Array.from(new Set(appointments.map((apt) => apt.hospital).filter(Boolean)))
       : [];
     return fromData.length ? fromData : DEFAULT_HOSPITAL_OPTIONS;
-  }, [data]);
+  }, [appointments]);
 
   return (
     <div className="space-y-6">
@@ -58,6 +77,18 @@ const AppointmentsView = ({ data }) => {
             <Plus className="w-4 h-4" /> New Appointment
           </button>
         </div>
+
+        {banner && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              banner.type === "error"
+                ? "bg-red-50 border-red-200 text-red-700"
+                : "bg-green-50 border-emerald-200 text-emerald-700"
+            }`}
+          >
+            {banner.message}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -113,7 +144,7 @@ const AppointmentsView = ({ data }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {data.appointments.slice(0, 10).map((apt) => (
+              {appointments.slice(0, 10).map((apt) => (
                 <tr key={apt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                   <td className="px-6 py-4">
                     <div className="font-medium text-slate-900 dark:text-white">{apt.time}</div>
