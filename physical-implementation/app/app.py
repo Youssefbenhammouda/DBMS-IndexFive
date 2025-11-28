@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import mysql.connector
 from mysql.connector import errorcode
@@ -71,7 +72,14 @@ async def get_core_dashboard_stats(
     query: Annotated[QueryCoreDashboardStats, Query()],
     conn: aiomysql.Connection = Depends(get_conn),
 ):
-    return await get_core_dashboard_stats_mnhs(conn, query)
+    try:
+        return await get_core_dashboard_stats_mnhs(conn, query)
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"message": str(e)},
+        )
 
 
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")
