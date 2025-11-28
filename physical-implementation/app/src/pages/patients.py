@@ -2,6 +2,7 @@ import aiomysql
 from typing import AsyncIterator, List, Dict, Any, Optional, Literal
 from pydantic import BaseModel
 from datetime import date, time
+from datetime import datetime
 
 # model
 
@@ -9,7 +10,7 @@ from datetime import date, time
 class Patient(BaseModel):
     iid: int
     cin: str
-    full_name: str
+    name: str
     birth: Optional[date] = None
     sex: Literal["M", "F"]
     blood_group: Optional[Literal["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]] = (
@@ -17,6 +18,7 @@ class Patient(BaseModel):
     )
     phone: Optional[str] = None
     email: Optional[str] = None
+    city : Optional[str] = None
 
 
 class Staff(BaseModel):
@@ -25,78 +27,179 @@ class Staff(BaseModel):
     status: Optional[str] = "Active"
 
 
+from datetime import datetime, date, time
+import aiomysql
 
-# api
-
-
-async def get_all_patients(conn: aiomysql.Connection) -> List[Dict[str, Any]]:
-    """Get all patients with required fields."""
+async def get_all_patients(conn):
     async with conn.cursor(aiomysql.DictCursor) as cur:
-        await cur.execute(
-            """
-            SELECT 
-                IID as iid,
-                CIN as cin,
-                FullName as name,
-                Sex as sex,
-                Birth as birthDate,
-                BloodGroup as bloodGroup,
-                Phone as phone,
-                Email as email
-            FROM Patient
-            ORDER BY IID
-        """
-        )
+        await cur.execute("""
+WITH NextAppointments AS (
+    SELECT CA.IID, CA.CAID, CA.Date, CA.Time, CA.DEP_ID, A.Reason,
+           ROW_NUMBER() OVER(PARTITION BY CA.IID ORDER BY CA.Date, CA.Time) AS rn
+    FROM ClinicalActivity CA
+    LEFT JOIN Appointment A ON A.CAID = CA.CAID
+    WHERE CA.Date >= CURRENT_DATE
+)
+SELECT
+    P.IID AS iid,
+    UPPER(P.CIN) AS cin,
+    P.FullName AS name,
+    P.Sex AS sex,
+    P.Birth AS birthDate,
+    P.BloodGroup AS bloodGroup,
+    P.Phone AS phone,
+    CL.City AS city,
+    COALESCE(I.Type, 'None') AS insurance,
+    CASE WHEN I.Type IS NOT NULL THEN 'Active' ELSE 'Self-Pay' END AS insuranceStatus,
+    CASE WHEN I.InsID IS NOT NULL THEN CONCAT('Policy ', LPAD(I.InsID,4,'0'), '-', LPAD(P.IID,4,'0')) ELSE NULL END AS policyNumber,
+    CASE WHEN EM.Outcome = 'Admitted' THEN 'Admitted' ELSE 'Outpatient' END AS status,
+    
+    NA.Date AS nextVisitDate,
+    NA.Time AS nextVisitTime,
+    H.Name AS nextVisitHospital,
+    D.Name AS nextVisitDepartment,
+    NA.Reason AS nextVisitReason
+
+FROM Patient P
+
+-- Primary city
+LEFT JOIN (
+    SELECT H.IID, CL.City
+    FROM have H
+    JOIN ContactLocation CL ON H.CLID = CL.CLID
+    WHERE H.CLID IN (
+        SELECT MIN(CLID) FROM have H2 WHERE H2.IID = H.IID
+    )
+) CL ON P.IID = CL.IID
+
+-- Latest insurance
+LEFT JOIN (
+    SELECT CA.IID, E.InsID, I.Type
+    FROM ClinicalActivity CA
+    LEFT JOIN Expense E ON E.CAID = CA.CAID
+    LEFT JOIN Insurance I ON I.InsID = E.InsID
+    WHERE CA.CAID IN (
+        SELECT MAX(CAID) FROM ClinicalActivity CA2 WHERE CA2.IID = CA.IID
+    )
+) I ON P.IID = I.IID
+
+-- Latest status
+LEFT JOIN (
+    SELECT CA.IID, EM.Outcome
+    FROM ClinicalActivity CA
+    LEFT JOIN Emergency EM ON EM.CAID = CA.CAID
+    WHERE CA.CAID IN (
+        SELECT MAX(CAID) FROM ClinicalActivity CA2 WHERE CA2.IID = CA.IID
+    )
+) EM ON P.IID = EM.IID
+
+-- Only the next upcoming appointment per patient
+LEFT JOIN NextAppointments NA ON P.IID = NA.IID AND NA.rn = 1
+LEFT JOIN Department D ON D.DEP_ID = NA.DEP_ID
+LEFT JOIN Hospital H ON H.HID = D.HID
+
+ORDER BY P.FullName ASC;
+        """)
+
         patients = await cur.fetchall()
 
-        # Add required fields with defaults
-        for patient in patients:
-            patient["city"] = "N/A"
-            patient["insurance"] = "None"
-            patient["status"] = "Outpatient"
-            if patient["birthDate"]:
-                patient["birthDate"] = patient["birthDate"].isoformat()
+    # Convert dates/times and build nextVisit object
+    for p in patients:
+        p["birthDate"] = p["birthDate"].isoformat() if isinstance(p["birthDate"], (date, datetime)) else None
 
-        return patients
+        if p.get("nextVisitDate"):
+            p["nextVisit"] = {
+                "date": p["nextVisitDate"].isoformat() if isinstance(p["nextVisitDate"], (date, datetime)) else None,
+                "time": p["nextVisitTime"].isoformat() if isinstance(p["nextVisitTime"], (time, datetime)) else None,
+                "hospital": p["nextVisitHospital"],
+                "department": p["nextVisitDepartment"],
+                "reason": p["nextVisitReason"]
+            }
+        else:
+            p["nextVisit"] = None
+
+        # Remove separate columns
+        for k in ["nextVisitDate", "nextVisitTime", "nextVisitHospital", "nextVisitDepartment", "nextVisitReason"]:
+            p.pop(k, None)
+
+        p["lastSyncedAt"] = datetime.utcnow().isoformat() + "Z"
+
+    return patients
 
 
-async def create_patient(
-    conn: aiomysql.Connection, patient_data: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Create a new patient in the actual database."""
-    async with conn.cursor() as cur:
+
+
+
+
+async def create_patient(conn: aiomysql.Connection, patient_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create a new patient in the database.
+    Enforces uniqueness of IID/CIN, optionally creates city contact location.
+    Returns the normalized patient object following GET schema.
+    """
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        # Normalize CIN
+        cin = patient_data["cin"].upper()
+        iid = patient_data["iid"]
+
+        # Check uniqueness of IID and CIN
+        await cur.execute("SELECT 1 FROM Patient WHERE IID=%s OR CIN=%s", (iid, cin))
+        if await cur.fetchone():
+            return {"message": f"Patient with IID {iid} or CIN {cin} already exists"}
+
+        # Insert patient
         await cur.execute(
             """
             INSERT INTO Patient (IID, CIN, FullName, Birth, Sex, BloodGroup, Phone, Email)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """,
+            """,
             (
-                patient_data["iid"],
-                patient_data["cin"],
-                patient_data["full_name"],  # <-- correct mapping
-                patient_data.get("birth"),  # can be None
+                iid,
+                cin,
+                patient_data["name"],
+                patient_data.get("birth"),
                 patient_data["sex"],
-                patient_data.get("blood_group"),
+                patient_data.get("bloodGroup"),
                 patient_data.get("phone"),
                 patient_data.get("email"),
-            ),
+            )
         )
 
-    await conn.commit()
+        # Optional city handling
+        city = patient_data.get("city")
+        if city:
+            # Insert a new ContactLocation (AUTO_INCREMENT on CLID required)
+            await cur.execute(
+                "INSERT INTO ContactLocation (City) VALUES (%s)", (city,)
+            )
+            clid = cur.lastrowid  # ID of the new city
+            # Link via 'have'
+            await cur.execute(
+                "INSERT INTO have (IID, CLID) VALUES (%s, %s)", (iid, clid)
+            )
 
-    return {
-        "iid": patient_data["iid"],
-        "cin": patient_data["cin"],
-        "name": patient_data["full_name"],
-        "sex": patient_data["sex"],
-        "birthDate": patient_data.get("birth"),
-        "bloodGroup": patient_data.get("blood_group"),
-        "phone": patient_data.get("phone"),
-        "email": patient_data.get("email"),
-        "city": "N/A",
-        "status": "Outpatient",
-    }
+        await conn.commit()
 
+        # Build normalized patient object
+        patient = {
+            "iid": iid,
+            "cin": cin,
+            "name": patient_data["name"],
+            "sex": patient_data["sex"],
+            "birthDate": patient_data.get("birth"),
+            "bloodGroup": patient_data.get("bloodGroup"),
+            "phone": patient_data.get("phone"),
+            "email": patient_data.get("email"),
+            "city": city if city else "N/A",
+            "status": "Outpatient",          # default derived
+            "insurance": "None",             # default derived
+            "insuranceStatus": "Self-Pay",   # default derived
+            "policyNumber": None,            # default derived
+            "nextVisit": None,               # no upcoming appointment yet
+            "lastSyncedAt": datetime.utcnow().isoformat() + "Z"
+        }
+
+        return {"patient": patient, "message": "Patient created"}
 
 async def get_all_staff(conn: aiomysql.Connection) -> List[Dict[str, Any]]:
     """Get all staff with departments and hospitals."""
