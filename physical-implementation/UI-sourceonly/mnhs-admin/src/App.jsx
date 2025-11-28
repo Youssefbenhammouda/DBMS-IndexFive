@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -17,30 +17,94 @@ import PatientsView from "./views/PatientsView";
 import AppointmentsView from "./views/AppointmentsView";
 import StaffView from "./views/StaffView";
 import SidebarItem from "./components/navigation/SidebarItem";
-import { generateMockData } from "./data/mockData";
+import BackendConnector from "./services/backendConnector";
+import { ModelConnector } from "./models/modelConnector";
+import { registerCoreModels } from "./models/pageModelRegistry";
 
 export default function MNHSAdmin() {
   const [activePage, setActivePage] = useState("Overview");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDarkMode, setDarkMode] = useState(false);
+  const [pageData, setPageData] = useState({});
+  const [loadingPageKey, setLoadingPageKey] = useState(null);
+  const [pageErrors, setPageErrors] = useState({});
 
-  const data = useMemo(() => generateMockData(), []);
+  const apiBaseUrl = useMemo(() => {
+    const configuredBaseUrl = import.meta.env?.VITE_API_BASE_URL;
+    return (configuredBaseUrl && configuredBaseUrl.trim()) || "http://127.0.0.1:8000/api";
+  }, []);
+
+  const backendConnector = useMemo(() => new BackendConnector({ baseUrl: apiBaseUrl }), [apiBaseUrl]);
+
+  const modelConnector = useMemo(() => {
+    const connector = new ModelConnector(backendConnector);
+    registerCoreModels(connector);
+    return connector;
+  }, [backendConnector]);
+
+  const loadPageData = useCallback(
+    async (pageKey) => {
+      setLoadingPageKey(pageKey);
+      setPageErrors((prev) => {
+        if (!prev[pageKey]) return prev;
+        const next = { ...prev };
+        delete next[pageKey];
+        return next;
+      });
+      try {
+        const payload = await modelConnector.load(pageKey);
+        setPageData((prev) => ({ ...prev, [pageKey]: payload }));
+      } catch (error) {
+        console.error(`Failed to load ${pageKey} data`, error);
+        setPageErrors((prev) => ({ ...prev, [pageKey]: error.message }));
+      } finally {
+        setLoadingPageKey((current) => (current === pageKey ? null : current));
+      }
+    },
+    [modelConnector],
+  );
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
   }, [isDarkMode]);
 
+  useEffect(() => {
+    if (!pageData[activePage]) {
+      loadPageData(activePage);
+    }
+  }, [activePage, loadPageData, pageData]);
+
   const renderContent = () => {
+    const dataForPage = pageData[activePage];
+    const errorForPage = pageErrors[activePage];
+
+    if (errorForPage && !dataForPage) {
+      if (activePage === "Overview") {
+        return <OverviewView data={null} error={errorForPage} onNavigate={setActivePage} />;
+      }
+      return (
+        <div className="p-10 text-center text-red-500">
+          Failed to load {activePage} data: {errorForPage}
+        </div>
+      );
+    }
+
+    const isActivePageLoading = loadingPageKey === activePage;
+
+    if (!dataForPage || isActivePageLoading) {
+      return <div className="p-10 text-center text-slate-500">Loading {activePage} data...</div>;
+    }
+
     switch (activePage) {
       case "Overview":
-        return <OverviewView data={data} />;
+          return <OverviewView data={dataForPage} error={errorForPage} onNavigate={setActivePage} />;
       case "Patients":
-        return <PatientsView data={data} />;
+        return <PatientsView data={dataForPage} />;
       case "Appointments":
-        return <AppointmentsView data={data} />;
+        return <AppointmentsView data={dataForPage} />;
       case "Staff":
-        return <StaffView data={data} />;
+        return <StaffView data={dataForPage} />;
       default:
         return <div className="p-10 text-center text-slate-500">Module Under Construction</div>;
     }

@@ -4,10 +4,16 @@ from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 import mysql.connector
 from mysql.connector import errorcode
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Query
 from src.db import create_pool, aiomysql
-from src.mnhs import list_patients_ordered_by_last_name, Patient
+from src.mnhs import (
+    list_patients_ordered_by_last_name,
+    Patient,
+    get_core_dashboard_stats_mnhs,
+)
+from src.models import *
 from typing import AsyncIterator
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -25,6 +31,15 @@ app = FastAPI(
     description="API for managing medical and health services using IndexFive DBMS.",
     version="0.0.1",
     lifespan=lifespan,
+)
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -46,6 +61,17 @@ async def get_conn() -> AsyncIterator[aiomysql.Connection]:
 async def get_patients(conn: aiomysql.Connection = Depends(get_conn)):
     patients = await list_patients_ordered_by_last_name(conn, limit=50)
     return patients
+
+
+@app.get(
+    "/api/core-dashboard",
+    response_model=CoreDashboardResponse,
+)
+async def get_core_dashboard_stats(
+    query: Annotated[QueryCoreDashboardStats, Query()],
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    return await get_core_dashboard_stats_mnhs(conn, query)
 
 
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")

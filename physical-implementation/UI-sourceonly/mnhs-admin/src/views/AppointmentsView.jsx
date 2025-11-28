@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, Calendar, Filter, Plus, Check, X } from "lucide-react";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
 import Modal from "../components/common/Modal";
-import { HOSPITALS } from "../data/mockData";
+
+const DEFAULT_HOSPITAL_OPTIONS = ["Rabat Central", "Casablanca General", "Marrakech Health", "Tangier Med"];
 
 const AppointmentsView = ({ data }) => {
   const [viewMode, setViewMode] = useState("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const hospitalOptions = useMemo(() => {
+    const fromData = Array.isArray(data?.appointments)
+      ? Array.from(new Set(data.appointments.map((apt) => apt.hospital).filter(Boolean)))
+      : [];
+    return fromData.length ? fromData : DEFAULT_HOSPITAL_OPTIONS;
+  }, [data]);
 
   return (
     <div className="space-y-6">
@@ -176,7 +184,7 @@ const AppointmentsView = ({ data }) => {
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Hospital</label>
             <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600">
-              {HOSPITALS.map((h) => (
+              {hospitalOptions.map((h) => (
                 <option key={h}>{h}</option>
               ))}
             </select>
