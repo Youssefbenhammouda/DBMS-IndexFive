@@ -57,6 +57,17 @@ const PATIENTS_MODEL_CONTRACT = {
   },
 };
 
+const normalizePatientNextVisit = (visit) => {
+  if (!visit || typeof visit !== "object") return null;
+  return {
+    date: typeof visit.date === "string" ? visit.date : null,
+    time: typeof visit.time === "string" ? visit.time : null,
+    hospital: visit.hospital || "To be assigned",
+    department: visit.department || null,
+    reason: visit.reason || null,
+  };
+};
+
 const normalizePatientRecord = (patient, index) => ({
   iid: patient.iid ?? `P-${1000 + index}`,
   cin: patient.cin ?? "UNKNOWN",
@@ -69,6 +80,9 @@ const normalizePatientRecord = (patient, index) => ({
   city: patient.city || "N/A",
   insurance: patient.insurance || "None",
   status: patient.status || "Outpatient",
+  insuranceStatus: patient.insuranceStatus || (patient.insurance === "None" ? "Self-Pay" : "Active"),
+  policyNumber: patient.policyNumber || null,
+  nextVisit: normalizePatientNextVisit(patient.nextVisit),
 });
 
 const buildPatientsModel = (payload = {}) => {
@@ -186,79 +200,181 @@ const buildMedicationsModel = (payload = {}) => {
 };
 
 const BILLING_MODEL_CONTRACT = {
-  requiredKeys: ["kpis", "insuranceSplit", "reimbursementTimeline", "outstandingClaims", "recentExpenses"],
+  requiredKeys: [
+    "kpis",
+    "insuranceSplit",
+    "hospitalRollup",
+    "departmentSummary",
+    "recentExpenses",
+    "medicationUtilization",
+    "metadata",
+  ],
   validators: {
     kpis: Array.isArray,
     insuranceSplit: Array.isArray,
-    reimbursementTimeline: Array.isArray,
-    outstandingClaims: Array.isArray,
+    hospitalRollup: Array.isArray,
+    departmentSummary: Array.isArray,
     recentExpenses: Array.isArray,
-    lastSyncedAt: (value) => value === undefined || value === null || typeof value === "string",
+    medicationUtilization: Array.isArray,
+    metadata: (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value),
   },
 };
 
+const normalizeTrend = (trend) => {
+  if (!trend || typeof trend !== "object") return null;
+  const direction = trend.direction === "down" ? "down" : trend.direction === "up" ? "up" : null;
+  const value = typeof trend.value === "number" ? trend.value : Number(trend.value);
+  if (!direction && (value === undefined || Number.isNaN(value))) {
+    return null;
+  }
+  return {
+    direction,
+    value: Number.isNaN(value) ? null : value,
+  };
+};
+
 const normalizeBillingKpi = (entry, index) => ({
+  key: entry.key || `kpi-${index}`,
   title: entry.title || `Metric ${index + 1}`,
-  value: entry.value || "—",
-  subtext: entry.subtext || "",
-  trend: entry.trend === "down" ? "down" : entry.trend === "up" ? "up" : null,
-  trendValue: entry.trendValue || null,
+  value: typeof entry.value === "number" ? entry.value : Number(entry.value) || 0,
+  unit: entry.unit || "MAD",
   iconKey: entry.iconKey || entry.icon || "CreditCard",
+  subtext: entry.subtext || null,
+  trend: normalizeTrend(entry.trend),
 });
 
 const normalizeInsuranceSlice = (entry, index) => ({
+  insId: entry.insId ?? null,
   type: entry.type || `Bucket ${index + 1}`,
   amount: typeof entry.amount === "number" ? entry.amount : 0,
-  claims: typeof entry.claims === "number" ? entry.claims : 0,
+  activities: typeof entry.activities === "number" ? entry.activities : entry.claims || 0,
+  share: typeof entry.share === "number" ? entry.share : null,
 });
 
-const normalizeTimelinePoint = (entry, index) => ({
-  month: entry.month || `M${index + 1}`,
-  reimbursed: typeof entry.reimbursed === "number" ? entry.reimbursed : 0,
-  pending: typeof entry.pending === "number" ? entry.pending : 0,
-});
-
-const normalizeClaimRecord = (entry, index) => ({
-  id: entry.id || `CLAIM-${index}`,
-  insurer: entry.insurer || "Unknown",
-  hospital: entry.hospital || "Unknown Hospital",
-  amount: typeof entry.amount === "number" ? entry.amount : 0,
-  daysOutstanding: typeof entry.daysOutstanding === "number" ? entry.daysOutstanding : 0,
-  priority: entry.priority || "Medium",
-});
-
-const normalizeExpenseRecord = (entry, index) => ({
-  id: entry.id || `EXP-${index}`,
-  date: entry.date || new Date().toISOString(),
-  hospital: entry.hospital || "Unknown Hospital",
-  patient: entry.patient || `Patient ${index}`,
-  insurance: entry.insurance || "None",
+const normalizeHospitalRollup = (entry, index) => ({
+  hid: entry.hid ?? index,
+  name: entry.name || `Hospital ${index + 1}`,
+  region: entry.region || "Unknown Region",
   total: typeof entry.total === "number" ? entry.total : 0,
-  status: entry.status || "Awaiting Reimbursement",
-  staff: entry.staff || "Unknown Staff",
-  department: entry.department || "General",
-  medications: ensureArray(entry.medications).map((med, medIndex) => ({
-    name: med.name || `Medication ${medIndex + 1}`,
-    qty: typeof med.qty === "number" ? med.qty : 0,
-    unitPrice: typeof med.unitPrice === "number" ? med.unitPrice : 0,
-  })),
-  notes: entry.notes || "",
+  activities: typeof entry.activities === "number" ? entry.activities : 0,
+  insuredShare: typeof entry.insuredShare === "number" ? entry.insuredShare : null,
+  avgExpense: typeof entry.avgExpense === "number" ? entry.avgExpense : null,
 });
+
+const normalizeDepartmentSummary = (entry, index) => ({
+  depId: entry.depId ?? index,
+  hospital: entry.hospital || "Unknown Hospital",
+  department: entry.department || `Department ${index + 1}`,
+  specialty: entry.specialty || "General",
+  total: typeof entry.total === "number" ? entry.total : 0,
+  activities: typeof entry.activities === "number" ? entry.activities : 0,
+  avgExpense: typeof entry.avgExpense === "number" ? entry.avgExpense : null,
+});
+
+const normalizeExpenseRecord = (entry, index) => {
+  const normalizeOrgBlock = (block, fallbackLabel, idKey) => {
+    if (block && typeof block === "object" && !Array.isArray(block)) {
+      return {
+        [idKey]: block[idKey] ?? block.id ?? null,
+        name: block.name || fallbackLabel,
+        region: block.region || block.location || block.regionName || null,
+      };
+    }
+    return { [idKey]: null, name: block || fallbackLabel, region: null };
+  };
+
+  const normalizePerson = (person, fallbackLabel, idKey) => {
+    if (person && typeof person === "object" && !Array.isArray(person)) {
+      return {
+        [idKey]: person[idKey] ?? person.id ?? null,
+        fullName: person.fullName || person.name || fallbackLabel,
+      };
+    }
+    return { [idKey]: null, fullName: person || fallbackLabel };
+  };
+
+  const normalizeInsurance = (insurance) => {
+    if (insurance && typeof insurance === "object" && !Array.isArray(insurance)) {
+      return {
+        insId: insurance.insId ?? insurance.id ?? null,
+        type: insurance.type || insurance.name || "Self-Pay",
+      };
+    }
+    return {
+      insId: null,
+      type: insurance || "Self-Pay",
+    };
+  };
+
+  const normalizePrescription = (prescription) => {
+    if (!prescription || typeof prescription !== "object" || Array.isArray(prescription)) {
+      return null;
+    }
+    return {
+      pid: prescription.pid ?? prescription.id ?? null,
+      medications: ensureArray(prescription.medications).map((med, medIndex) => ({
+        mid: med.mid ?? med.id ?? medIndex,
+        name: med.name || `Medication ${medIndex + 1}`,
+        dosage: med.dosage || null,
+        duration: med.duration || null,
+        therapeuticClass: med.therapeuticClass || med.class || null,
+      })),
+    };
+  };
+
+  return {
+    expId: entry.expId ?? entry.id ?? `EXP-${index}`,
+    caid: entry.caid ?? null,
+    activityDate: entry.activityDate || entry.date || new Date().toISOString(),
+    hospital: normalizeOrgBlock(entry.hospital, "Unknown Hospital", "hid"),
+    department: normalizeOrgBlock(entry.department, "General", "depId"),
+    patient: normalizePerson(entry.patient, `Patient ${index + 1}`, "iid"),
+    staff: normalizePerson(entry.staff, "Unknown Staff", "staffId"),
+    insurance: normalizeInsurance(entry.insurance),
+    total: typeof entry.total === "number" ? entry.total : 0,
+    prescription: normalizePrescription(entry.prescription),
+  };
+};
+
+const normalizeMedicationUtilization = (entry, index) => ({
+  mid: entry.mid ?? entry.id ?? index,
+  name: entry.name || `Medication ${index + 1}`,
+  therapeuticClass: entry.therapeuticClass || entry.class || "General",
+  prescriptions: typeof entry.prescriptions === "number" ? entry.prescriptions : 0,
+  share: typeof entry.share === "number" ? entry.share : null,
+});
+
+const normalizeMetadata = (metadata = {}) => {
+  const filters = metadata.filters && typeof metadata.filters === "object" && !Array.isArray(metadata.filters)
+    ? metadata.filters
+    : {};
+  let lastSyncedAt = metadata.lastSyncedAt || null;
+  if (lastSyncedAt instanceof Date) {
+    lastSyncedAt = lastSyncedAt.toISOString();
+  }
+  if (lastSyncedAt && typeof lastSyncedAt !== "string") {
+    lastSyncedAt = null;
+  }
+  return { filters, lastSyncedAt };
+};
 
 const buildBillingModel = (payload = {}) => {
   const kpis = ensureArray(payload.kpis).map(normalizeBillingKpi);
   const insuranceSplit = ensureArray(payload.insuranceSplit).map(normalizeInsuranceSlice);
-  const reimbursementTimeline = ensureArray(payload.reimbursementTimeline).map(normalizeTimelinePoint);
-  const outstandingClaims = ensureArray(payload.outstandingClaims).map(normalizeClaimRecord);
+  const hospitalRollup = ensureArray(payload.hospitalRollup).map(normalizeHospitalRollup);
+  const departmentSummary = ensureArray(payload.departmentSummary).map(normalizeDepartmentSummary);
   const recentExpenses = ensureArray(payload.recentExpenses).map(normalizeExpenseRecord);
+  const medicationUtilization = ensureArray(payload.medicationUtilization).map(normalizeMedicationUtilization);
+  const metadata = normalizeMetadata(payload.metadata || {});
 
   return {
     kpis,
     insuranceSplit,
-    reimbursementTimeline,
-    outstandingClaims,
+    hospitalRollup,
+    departmentSummary,
     recentExpenses,
-    lastSyncedAt: payload.lastSyncedAt || null,
+    medicationUtilization,
+    metadata,
   };
 };
 

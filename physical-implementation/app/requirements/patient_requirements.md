@@ -1,50 +1,103 @@
-**Backend Requirements for `/api/patients`**
+# Patients API - Database-Aligned Contract
 
-- **Endpoint**: `/api/patients`
-  - **Purpose**: Supplies the Patients page with the full list of patient demographics used by the table and detail drawer.
-  - **Query Params**:  optional future filters such as `search=<string>`, `sex=<M|F>`, `status=<Admitted|Outpatient>`, `bloodGroup=<A+|...>` may be appended but are not required today.
-  - **Method**: `GET`.
-  - **Expected Response (200)**:
-    - `patients` (array, required): each object must include
-      - `iid` (integer) – primary identifier, unique per patient.
-      - `cin` (string, max 10) – national ID, uppercase, unique.
-      - `name` (string, max 100) – full name.
-      - `sex` ("M" | "F") – gender indicator.
-      - `birthDate` (string | null) – ISO date-only `YYYY-MM-DD`, nullable.
-      - `bloodGroup` (string | null) – one of `A+`, `A-`, `B+`, `B-`, `O+`, `O-`, `AB+`, `AB-`.
-      - `phone` (string | null) – up to 15 chars, may include leading `+` and separators.
-      - `email` (string | null) – valid email format, <=160 chars.
-      - `city` (string) – residence/city label; supply "N/A" when unknown.
-      - `insurance` (string) – one of the supported insurance plans or "None".
-      - `status` (string) – at minimum `Admitted` or `Outpatient`; additional values allowed but documented.
-    - `lastSyncedAt` (string | null): ISO timestamp indicating when the payload was generated.
-  - **Failure (4xx/5xx)**: JSON `{ "message": string }`; the UI shows the message in an inline banner without alteration.
+## 1. Objectives
+- Feed the Patients view (table, drawer, and "Add Patient" modal) with a single `/api/patients` round-trip.
+- Make every field traceable to the MNHS schema (`Patient`, `ContactLocation`, `have`, `ClinicalActivity`, `Emergency`, `Expense`, `Insurance`).
+- Call out derived values so backend, data, and QA teams know how to reproduce them from SQL.
 
-**Backend Requirements for `POST /api/patients`**
+## 2. Data Sources & Field Mapping
 
-- **Endpoint**: `/api/patients`
-  - **Purpose**: Creates a new patient record from the Add Patient modal.
-  - **Method**: `POST`.
-  - **Request Body (JSON)**:
-    - `iid` (integer, required) – must be unique; the UI enforces numeric input but the backend must validate.
-    - `cin` (string, required, max 10) – uppercase national ID, unique.
-    - `name` (string, required, max 100) – patient's full name.
-    - `sex` (required) – `"M"` or `"F"`.
-    - `birth` (string | null) – ISO `YYYY-MM-DD` or null.
-    - `bloodGroup` (string | null) – same enum as above.
-    - `phone` (string | null) – up to 15 characters.
-    - `email` (string | null) – up to 160 characters, standard email syntax.
-    - Optional backend-managed fields such as `city`, `insurance`, `status` may be accepted and echoed back if provided; otherwise they default server-side (`"N/A"`, `"None"`, `"Outpatient"`).
-  - **Successful Response (201)**:
-    - `patient` (object): canonical representation of the created record, following the exact schema of the `patients` array in the GET response (including `birthDate`, `city`, `insurance`, `status`, etc.).
-    - `message` (string): short confirmation (e.g., "Patient created").
-  - **Failure (4xx/5xx)**:
-    - Body `{ "message": string }` describing the validation or server error (duplicate IID/CIN, missing fields, invalid enum, etc.). The UI displays this message above the table and keeps the modal open, so prefer concise user-friendly wording.
+| UI field | Description | Source tables & rule |
+| --- | --- | --- |
+| `iid` | Internal identifier shown in the drawer header. | `Patient.IID` (PK). |
+| `cin` | National ID used for search. | `Patient.CIN`, normalized to uppercase. |
+| `name` | Full name displayed in the list and drawer. | `Patient.FullName`. |
+| `sex` | Gender badge. | `Patient.Sex` (`'M'` or `'F'`). |
+| `birthDate` | Birth date string | `Patient.Birth` rendered as ISO `YYYY-MM-DD`; keep `null` when empty. |
+| `bloodGroup` | Optional blood group chip. | `Patient.BloodGroup`. |
+| `phone` | Primary phone number. | `Patient.Phone`. |
+| `email` | Drawer contact detail. | Not stored in the current schema; return `null` so the UI falls back to `"N/A"` until the column is added. |
+| `city` | City column + drawer item. | Join `have` -> `ContactLocation` and choose the row with the smallest `CLID` (acts as "primary address"). Emit `ContactLocation.City` or `"N/A"` when no address exists. |
+| `insurance` | Badge in the table/drawer. | For each patient, find the most recent `Expense` (via `ClinicalActivity.IID = Patient.IID`) and use `COALESCE(Insurance.Type, "None")`. If no expenses exist, emit `"None"`. |
+| `insuranceStatus` | Status pill next to the insurance badge. | Emit `"Active"` when the rule above resolves to a named insurer; otherwise return `"Self-Pay"`. |
+| `policyNumber` | Policy text in the drawer card. | Deterministically compose `Policy ${LPAD(Insurance.InsID,4)}-${LPAD(Patient.IID,4)}`; when no insurer exists, return `null`. |
+| `status` | Table indicator dot. | Look at the latest `ClinicalActivity` for the patient. If it is linked to an `Emergency` row whose `Outcome = 'Admitted'`, expose `"Admitted"`; otherwise expose `"Outpatient"`. |
+| `nextVisit` | Object powering the Next Visit card. | Use `Appointment` joined through `ClinicalActivity`: select the earliest appointment whose `Date >= CURRENT_DATE`, and emit `{ date, time, hospital, department, reason }`. Return `null` when no upcoming appointment exists. |
+| `lastSyncedAt` | Data freshness banner. | Server timestamp (`NOW()` in UTC). |
 
-**General Notes**
+## 3. `GET /api/patients`
 
-- Both endpoints must set `Content-Type: application/json` and respond with JSON payloads only.
-- All numeric values should be integers; the UI formats them downstream.
-- Dates must be timezone-free ISO date strings; timestamps should be ISO 8601 with timezone (e.g., `2025-11-28T09:30:00Z`).
-- Reserve additional fields for future use, but never omit the required keys even when arrays are empty.
-- These contracts mirror the in-app mock server; swapping to the real backend should require no UI changes besides pointing `VITE_API_BASE_URL` to the deployed API.
+- **Purpose:** hydrate the Patients page with everything it renders.
+- **Query Params (optional):**
+  - `search`: matches `Patient.CIN` or `Patient.FullName` (case-insensitive, substring).
+  - `sex`: `'M'` or `'F'`; applied directly to `Patient.Sex`.
+  - `status`: `'Admitted'` or `'Outpatient'`; filter after deriving status per the rule above.
+  - `bloodGroup`: restricts to the enumerated `Patient.BloodGroup` values.
+- **Response (200):**
+  - `patients`: ordered array (default sort: `Patient.FullName ASC`).
+  - `lastSyncedAt`: ISO 8601 timestamp with timezone.
+
+```json
+{
+  "patients": [
+    {
+      "iid": 1205,
+      "cin": "AB123456",
+      "name": "Amina Idrissi",
+      "sex": "F",
+      "birthDate": "1984-02-11",
+      "bloodGroup": "A+",
+      "phone": "+212612345678",
+      "email": null,
+      "city": "Rabat",
+      "insurance": "CNOPS",
+      "insuranceStatus": "Active",
+      "policyNumber": "MAR-0001-1205",
+      "status": "Admitted",
+      "nextVisit": {
+        "date": "2025-12-04",
+        "time": "09:00",
+        "hospital": "Rabat Central",
+        "department": "Cardiology",
+        "reason": "Cardiology follow-up"
+      }
+    }
+  ],
+  "lastSyncedAt": "2025-11-28T09:30:00Z"
+}
+```
+
+### 3.1 Derivation & edge cases
+- When multiple contact locations exist, return the one with the smallest `CLID`. Future work can add a `Primary` flag.
+- Patients without expenses must still show up; default their `insurance` to `"None"` and `status` to `"Outpatient"`.
+- When no insurer is available, set `insuranceStatus` to `"Self-Pay"`, `policyNumber` to `null`, and `nextVisit` to `null`.
+- The UI already guards against an empty `email`, so responding with `null` is acceptable until a column exists.
+
+## 4. `POST /api/patients`
+
+- **Purpose:** create a patient from the modal used in Patients and Staff screens.
+- **Request Body:**
+  - `iid` (integer, required): must be unique per `Patient.IID`.
+  - `cin` (string <=10, required): uppercase national ID.
+  - `name` (string <=100, required): full name maps to `Patient.FullName`.
+  - `sex` (`"M" | "F"`, required): stored in `Patient.Sex`.
+  - `birth` (ISO date string or `null`): persisted as `Patient.Birth`.
+  - `bloodGroup` (enum or `null`).
+  - `phone` (string <=15 or `null`).
+  - `email` (string <=160 or `null`): accepted and echoed back but not persisted until the schema gains the column.
+  - `city` (string, optional): when provided, create a lightweight `ContactLocation` row (`City=city`, other fields nullable) and link it via `have`.
+- **Read-only fields:** `insuranceStatus`, `policyNumber`, and `nextVisit` are derived as described above and should be ignored if the client attempts to send them.
+- **Validation:** enforce unique `iid`/`cin`, numeric IID, allowed enums, and format checks identical to the UI.
+- **Persistence rules:**
+  1. Insert into `Patient` with the supplied demographic columns.
+  2. Optionally insert `ContactLocation + have` for `city`.
+  3. Do **not** write insurance/status directly; those stay derived (see GET rules). New patients therefore start as `insurance="None"`, `status="Outpatient"`.
+- **Response (201):**
+  - `patient`: normalized object following the GET schema (including derived `city`, `insurance`, `status`, etc.).
+  - `message`: short confirmation (e.g., `"Patient created"`).
+- **Failure (4xx/5xx):** `{ "message": "..." }` surfaced verbatim by the UI.
+
+## 5. General Notes
+- All responses use `Content-Type: application/json`.
+- Dates are timezone-free ISO strings; timestamps (`lastSyncedAt`) include timezone.
+- Keep the contract backward compatible with the current mock server so swapping to the real backend only requires changing `VITE_API_BASE_URL`.

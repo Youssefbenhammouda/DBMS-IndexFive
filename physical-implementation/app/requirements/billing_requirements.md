@@ -1,142 +1,177 @@
-# Billing & Insurance API Contract
+# Billing & Insurance Dashboard – Database-Aligned Design
 
-The Billing & Insurance page consumes a dedicated `billing` resource that aggregates all dashboard widgets (KPIs, insurance split, reimbursement timeline, outstanding claims, and recent expenses) in a single round-trip. Additional write endpoints allow MNHS staff to record new expenses and log insurer payments directly from the UI.
+The redesigned Billing view only surfaces insights that can be computed from the MNHS lab schema (`Hospital`, `Department`, `Staff`, `Patient`, `ClinicalActivity`, `Expense`, `Insurance`, `Prescription`, `Includes`). Widgets that previously depended on mock-only fields (claim status, reimbursement timeline, free-form notes) have been removed. This document describes the layout, data contracts, and backend rules that map directly to the available tables.
 
-## Endpoint Summary
+## 1. Objectives
+- Use persisted data only: every number on the page must be derivable from the relations listed above.
+- Keep the round-trip contract (`GET /api/billing`) so the UI still hydrates all widgets with one request.
+- Document how write actions (`POST /api/billing/expense`) interact with real tables and which features remain backlog until supporting tables exist.
+
+## 2. Data Sources & Mapping
+
+| Dataset / Widget | Tables & Columns | Notes |
+| --- | --- | --- |
+| Activity KPIs | `Expense.Total`, `ClinicalActivity.Date`, `Hospital.Region`, `Insurance.InsID` | Aggregations over the last *N* days (default 30). |
+| Insurance Coverage Mix | `Expense`, `Insurance` | Treat `InsID IS NULL` as **Self-Pay** bucket. |
+| Hospital Billing Overview | `Hospital`, `ClinicalActivity`, `Expense`, `Insurance` | Group by `Hospital.HID`; show totals, volume, insured share. |
+| Department Leaderboard | `Department`, `ClinicalActivity`, `Expense` | Top departments by billed MAD and visit count. |
+| Recent Billable Activities | `Expense`, `ClinicalActivity`, `Hospital`, `Department`, `Patient`, `Staff`, `Insurance` | Sorted by `ClinicalActivity.Date` + `Time`. |
+| Medication Utilization Snapshot | `Prescription`, `Includes`, `Medication` | Count prescriptions and list medications linked to billed CAIDs. |
+
+## 3. Dashboard Layout (what the UI renders)
+
+### 3.1 Activity KPIs
+Four KPI tiles:
+1. **Total Billings (30d)** – `SUM(Expense.Total)` filtered by `ClinicalActivity.Date >= CURRENT_DATE - days_back`.
+2. **Insured Coverage** – `SUM(Expense.Total WHERE InsID IS NOT NULL) / SUM(Expense.Total)`.
+3. **Average Expense per Activity** – `SUM(Expense.Total) / COUNT(DISTINCT Expense.ExpID)`.
+4. **Active Hospitals** – `COUNT(DISTINCT Hospital.HID)` present in the filtered result set.
+Each KPI includes an `iconKey` (`CreditCard`, `ShieldCheck`, `Clock3`, `AlertTriangle`) and an optional trend percentage calculated by comparing the current window to the previous window.
+
+### 3.2 Insurance Coverage Mix (pie + legend)
+- Data rows: `type`, `insId`, `amount`, `activities` (count of expenses), `share` (percentage of total MAD).
+- `type` pulls from `Insurance.Type`; use `"Self-Pay"` when `InsID IS NULL`.
+
+### 3.3 Hospital Billing Overview (table)
+For each hospital in the filtered result set show:
+- `hid`, `name`, `region` (from `Hospital`).
+- `total` MAD billed, `activities` (expense count), `insuredShare` ratio, and `avgExpense` per activity.
+Sort descending by `total`. This replaces the old "outstanding claims" card.
+
+### 3.4 Department Leaderboard (horizontal list)
+Top departments by billed MAD:
+- `depId`, `department`, `hospital`, `specialty`, `total`, `activities`.
+- Highlight departments whose `total` exceeds the network average to focus operational reviews.
+
+### 3.5 Recent Billable Activities (table + drawer)
+- Rows limited to the latest 25 `Expense` records (most recent `ClinicalActivity.Date`, then `Time`).
+- Columns: `expId`, `caid`, formatted `activityDate`, `hospital`, `department`, `patient`, `insurance.type` (or `Self-Pay`), `total`.
+- Drawer details fetch related staff (`Staff.FullName`) and prescriptions.
+- Medication list is derived from `Includes` (`Dosage`, `Duration`) joined to `Medication.Name` and `TherapeuticClass`. No status/notes column is displayed because those fields do not exist in the schema.
+
+### 3.6 Medication Utilization Snapshot (bar list)
+Shows the top prescribed medications tied to billed clinical activities:
+- `mid`, `name`, `therapeuticClass`, `prescriptions` (count of `Includes` rows), and `% of billed prescriptions`.
+- Use this in place of the previous reimbursement timeline since we can reliably compute utilization but not payment timing.
+
+## 4. API Contract (v2)
+
+### 4.1 Endpoint Summary
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/billing` | Returns the complete data payload required by the Billing & Insurance dashboard. |
-| `POST` | `/api/billing/expense` | Creates a new expense tied 1:1 to a `ClinicalActivity` and queues it for reimbursement. |
-| `POST` | `/api/billing/insurance-payment` | Records a payment or adjustment received from an insurer and updates outstanding claim totals. |
+| `GET` | `/api/billing` | Fetch all dashboard data aligned with the schema. |
+| `POST` | `/api/billing/expense` | Insert a new `Expense` row tied to an existing `ClinicalActivity`. |
 
-## `GET /api/billing`
+> `POST /api/billing/insurance-payment` is **deferred**. The current database does not contain a payments table, so the endpoint remains on the backlog until a `Payment` relation is introduced.
 
-- **Purpose:** deliver all dashboard widgets in one request so the UI can render KPIs, charts, and tables without multiple round trips.
-- **Query Params:** optional `hospital_id`, `insurance`, `status`, `days_back` filters (default returns network-wide snapshot for last 30 days).
+### 4.2 `GET /api/billing`
+
+- **Query Params:**
+  - `hospital_id` (optional) – limits results to one hospital.
+  - `department_id` (optional) – narrows aggregations to a single department.
+  - `insurance_id` (optional) – filter by insurer or `null` for Self-Pay.
+  - `days_back` (default `30`) – rolling window applied to `ClinicalActivity.Date`.
 - **Response Body:**
-  ```json
-  {
-    "kpis": [
-      {
-        "title": "Monthly Billings",
-        "value": "1.28M MAD",
-        "subtext": "417 clinical activities",
-        "trend": "up",
-        "trendValue": "+8.4% vs last month",
-        "iconKey": "CreditCard"
-      }
-    ],
-    "insuranceSplit": [
-      { "type": "CNOPS", "amount": 520000, "claims": 138 }
-    ],
-    "reimbursementTimeline": [
-      { "month": "Nov", "reimbursed": 910000, "pending": 120000 }
-    ],
-    "outstandingClaims": [
-      {
-        "id": "CLAIM-901",
-        "insurer": "RAMED",
-        "hospital": "Casablanca Central",
-        "amount": 94000,
-        "daysOutstanding": 18,
-        "priority": "High"
-      }
-    ],
-    "recentExpenses": [
-      {
-        "id": "EXP-1048",
-        "date": "2025-11-12",
-        "hospital": "Rabat University Hospital",
-        "patient": "Amina Haddad",
-        "insurance": "CNSS",
-        "total": 2450,
-        "status": "Awaiting Reimbursement",
-        "staff": "Dr. Selma Idrissi",
-        "department": "Cardiology",
+
+```json
+{
+  "kpis": [
+    {
+      "key": "totalMonthlyBillings",
+      "title": "Total Billings (30d)",
+      "value": 1280000,
+      "unit": "MAD",
+      "trend": { "direction": "up", "value": 0.084 },
+      "iconKey": "CreditCard"
+    },
+    {
+      "key": "insuredCoverage",
+      "title": "Insured Coverage",
+      "value": 0.78,
+      "unit": "ratio",
+      "trend": { "direction": "up", "value": 0.032 },
+      "iconKey": "ShieldCheck"
+    }
+  ],
+  "insuranceSplit": [
+    { "insId": 1, "type": "CNOPS", "amount": 520000, "activities": 138, "share": 41 },
+    { "insId": null, "type": "Self-Pay", "amount": 50000, "activities": 32, "share": 4 }
+  ],
+  "hospitalRollup": [
+    { "hid": 3, "name": "Casablanca Central", "region": "Casablanca-Settat", "total": 260000, "activities": 84, "insuredShare": 0.81, "avgExpense": 3095 }
+  ],
+  "departmentSummary": [
+    { "depId": 14, "hospital": "Casablanca Central", "department": "Cardiology", "specialty": "Cardiology", "total": 76000, "activities": 22, "avgExpense": 3450 }
+  ],
+  "recentExpenses": [
+    {
+      "expId": 1048,
+      "caid": 8123,
+      "activityDate": "2025-11-12",
+      "hospital": { "hid": 4, "name": "Rabat University Hospital" },
+      "department": { "depId": 21, "name": "Cardiology" },
+      "patient": { "iid": 5401, "fullName": "Amina Haddad" },
+      "staff": { "staffId": 221, "fullName": "Dr. Selma Idrissi" },
+      "insurance": { "insId": 2, "type": "CNSS" },
+      "total": 2450,
+      "prescription": {
+        "pid": 9901,
         "medications": [
-          { "name": "Atorvastatin 40mg", "qty": 30, "unitPrice": 45 }
-        ],
-        "notes": "Awaiting CNSS batch cut-off on Nov 30"
+          { "mid": 120, "name": "Atorvastatin 40mg", "dosage": "1 tablet", "duration": "30 days" },
+          { "mid": 218, "name": "Metoprolol 50mg", "dosage": "1 tablet", "duration": "30 days" }
+        ]
       }
-    ],
+    }
+  ],
+  "medicationUtilization": [
+    { "mid": 120, "name": "Atorvastatin 40mg", "therapeuticClass": "Statin", "prescriptions": 48, "share": 0.16 }
+  ],
+  "metadata": {
+    "filters": { "hospitalId": null, "departmentId": null, "insuranceId": null, "daysBack": 30 },
     "lastSyncedAt": "2025-11-27T12:34:56Z"
   }
-  ```
+}
+```
+
 - **Contract Notes:**
-  - `kpis[].iconKey` must be one of `CreditCard`, `ShieldCheck`, `Clock3`, `AlertTriangle`; the UI maps these to Lucide icons.
-  - Amount fields are numeric (MAD) and the frontend formats them via `Intl.NumberFormat`.
-  - `recentExpenses[].medications` mirrors the `Includes` table (name/qty/unitPrice) for transparency when triggers recompute totals.
-  - `lastSyncedAt` should be ISO-8601 for display and cache invalidation.
+  - Amount fields are numeric (MAD). The UI still formats them via `Intl.NumberFormat`.
+  - `insuranceSplit.share` and `medicationUtilization.share` are expressed as percentages (0–100) or ratios (0–1); the client decides how to display them but the backend must be consistent.
+  - `recentExpenses` must include the relational identifiers so the drawer can deep-link to other admin pages.
+  - `prescription` is optional; omit it when no `Prescription` exists for the `CAID`.
+  - `metadata.filters` echoes the resolved filters for audit/debug purposes.
 
-## `POST /api/billing/expense`
+### 4.3 `POST /api/billing/expense`
 
-- **Purpose:** capture a new expense row linked to a `ClinicalActivity` (`CAID`) and optionally submit it to insurance.
+- **Purpose:** insert an `Expense` row for an existing clinical activity and, optionally, associate it with an insurer.
 - **Request Body:**
-  ```json
-  {
-    "caid": 8123,
-    "patient": "Amina Haddad",
-    "hospital": "Rabat University Hospital",
-    "department": "Cardiology",
-    "staff": "Dr. Selma Idrissi",
-    "insurance": "CNSS",
-    "total": 2450,
-    "status": "Awaiting Reimbursement",
-    "medications": [
-      { "name": "Atorvastatin 40mg", "qty": 30, "unitPrice": 45 }
-    ],
-    "notes": "Attach echo results"
-  }
-  ```
+
+```json
+{
+  "caid": 8123,
+  "insId": 2,
+  "total": 2450.0
+}
+```
+
 - **Validation Rules:**
-  - `caid`, `patient`, `hospital`, `department`, `staff`, `insurance`, and `total` are required.
-  - `status` accepts `Awaiting Reimbursement`, `Reimbursed`, `Flagged`, `Self-Paid`.
-  - `total` must be ≥ 0 and checked against trigger T2 (expense recompute) before commit.
+  1. `caid` is required and must reference a `ClinicalActivity` that does **not** already have an `Expense` (`UNIQUE` constraint on `Expense.CAID`).
+  2. `total` must be `>= 0` and comply with trigger T2 (recompute against linked `Includes` rows when present).
+  3. `insId` is optional; when provided it must match an existing `Insurance.InsID`. Use `null` for Self-Pay.
 - **Response:**
-  ```json
-  {
-    "expense": { "id": "EXP-2056", "status": "Awaiting Reimbursement", "total": 2450 },
-    "message": "Expense captured"
-  }
-  ```
-  The backend should also re-query `/api/billing` data internally or publish an event so the frontend can refresh.
 
-## `POST /api/billing/insurance-payment`
+```json
+{
+  "expense": { "expId": 2056, "caid": 8123, "insId": 2, "total": 2450.0 },
+  "message": "Expense captured"
+}
+```
 
-- **Purpose:** log a reimbursement or adjustment received from an insurer.
-- **Request Body:**
-  ```json
-  {
-    "insurer": "CNSS",
-    "amount": 64000,
-    "reference": "CNSS-BATCH-2025-11-27",
-    "notes": "Batch 457 covering 23 claims"
-  }
-  ```
-- **Validation Rules:**
-  - `insurer`, `amount`, `reference` are required.
-  - `amount` must be > 0; backend updates matching `outstandingClaims` rows (typically FIFO by `daysOutstanding`).
-- **Response:**
-  ```json
-  {
-    "payment": {
-      "insurer": "CNSS",
-      "amount": 64000,
-      "reference": "CNSS-BATCH-2025-11-27",
-      "recordedAt": "2025-11-28T08:15:00Z"
-    },
-    "message": "Payment recorded"
-  }
-  ```
+### 4.4 Deferred: `POST /api/billing/insurance-payment`
+The former reimbursement endpoint required an `OutstandingClaims` table that does not exist. Until a normalized payments table is added to the schema, this endpoint stays unimplemented. The UI surfaces a roadmap note instead of a form.
 
-## Error Handling
-
-- All endpoints return JSON errors: `{ "message": "human readable", "code": "BILLING_xxx" }` with appropriate HTTP status codes (400 validation, 404 missing CAID, 409 trigger violation, 500 unexpected).
-- Database trigger failures (double booking, stock underflow, etc.) bubble up via `SIGNAL` and should propagate their messages.
-- The Billing view surfaces load errors in a red inline banner and continues to allow mock-data preview when real data is unavailable.
-
-## Frontend Integration Notes
-
-- `BillingConnector` wraps the endpoints above and automatically clears the ModelConnector cache so `/api/billing` is re-fetched after any POST.
-- Until the backend goes live, the view loads inline mock data; once `/api/billing` responds successfully, the UI swaps to live data and displays the "Connected via BillingConnector" indicator.
+## 5. Error Handling & Frontend Integration
+- All endpoints return JSON errors: `{ "message": "human readable", "code": "BILLING_xxx" }` with HTTP status codes (400 validation, 404 missing CAID, 409 trigger violation, 500 unexpected).
+- Database trigger failures bubble up via `SIGNAL` and should propagate unchanged.
+- `BillingConnector` keeps the same contract: after a successful `POST /api/billing/expense` it clears the cached `Billing` payload so the next `GET` reflects the insert.
+- When `/api/billing` fails, the Billing view falls back to the inline mock snapshot and displays the error banner; once a real payload arrives it shows the "Connected via BillingConnector" indicator and uses `metadata.lastSyncedAt` for recency messaging.

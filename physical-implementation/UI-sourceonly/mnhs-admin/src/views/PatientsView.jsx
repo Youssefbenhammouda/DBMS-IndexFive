@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
@@ -25,6 +25,9 @@ const PatientsView = ({ data, error, patientConnector }) => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [banner, setBanner] = useState(null);
+  const [syncedAt, setSyncedAt] = useState(data?.lastSyncedAt ?? null);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     if (Array.isArray(data?.patients)) {
@@ -32,6 +35,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
       if (!selectedPatient && data.patients.length) {
         setSelectedPatient(data.patients[0]);
       }
+      setSyncedAt(data.lastSyncedAt ?? null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
@@ -47,6 +51,42 @@ const PatientsView = ({ data, error, patientConnector }) => {
       setBanner({ type: "error", message: error, id: Date.now() });
     }
   }, [error]);
+
+  const refreshPatients = useCallback(
+    async ({ forceRefresh = false, silent = false } = {}) => {
+      if (!patientConnector) return null;
+
+      if (!silent) {
+        setIsLoadingPatients(true);
+        setFetchError(null);
+      }
+
+      try {
+        const payload = await patientConnector.fetchPatients({ forceRefresh });
+        const nextPatients = Array.isArray(payload?.patients) ? payload.patients : [];
+        setPatients(nextPatients);
+        setSyncedAt(payload?.lastSyncedAt ?? null);
+        setFetchError(null);
+        return payload;
+      } catch (loadError) {
+        const message = loadError?.message || "Failed to load patients from backend.";
+        setFetchError(message);
+        return null;
+      } finally {
+        if (!silent) {
+          setIsLoadingPatients(false);
+        }
+      }
+    },
+    [patientConnector],
+  );
+
+  const hasInitialPatients = Array.isArray(data?.patients) && data.patients.length > 0;
+
+  useEffect(() => {
+    if (!patientConnector) return;
+    refreshPatients({ silent: hasInitialPatients });
+  }, [patientConnector, refreshPatients, hasInitialPatients]);
 
   const showBanner = (type, message) => {
     setBanner({ type, message, id: Date.now() });
@@ -134,6 +174,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
     try {
       const response = await patientConnector.addPatient(requestPayload);
       const created = response?.patient || requestPayload;
+      const fallbackInsurance = created.insurance ?? requestPayload.insurance ?? "None";
       const normalized = {
         iid: created.iid ?? trimmedIID,
         cin: created.cin ?? normalizedCIN,
@@ -146,6 +187,9 @@ const PatientsView = ({ data, error, patientConnector }) => {
         bloodGroup: created.bloodGroup || requestPayload.bloodGroup,
         phone: created.phone || requestPayload.phone,
         email: created.email || requestPayload.email,
+        insuranceStatus: created.insuranceStatus || (fallbackInsurance === "None" ? "Self-Pay" : "Active"),
+        policyNumber: created.policyNumber || null,
+        nextVisit: created.nextVisit || null,
       };
 
       setPatients((prev) => [normalized, ...prev]);
@@ -154,6 +198,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
       setFormErrors({});
       setIsModalOpen(false);
       showBanner("success", response?.message || "Patient added successfully.");
+      refreshPatients({ forceRefresh: true, silent: true });
     } catch (apiError) {
       showBanner("error", apiError?.message || "Failed to add patient. Please try again.");
     } finally {
@@ -170,6 +215,22 @@ const PatientsView = ({ data, error, patientConnector }) => {
       ),
     [patients, searchTerm]
   );
+
+  const hasConnector = Boolean(patientConnector);
+  const lastSyncedLabel = useMemo(() => (syncedAt ? new Date(syncedAt).toLocaleString() : null), [syncedAt]);
+  const nextVisitInfo = useMemo(() => {
+    if (!selectedPatient?.nextVisit?.date) return null;
+    const time = selectedPatient.nextVisit.time || "09:00";
+    const jsDate = new Date(`${selectedPatient.nextVisit.date}T${time}`);
+    return {
+      month: jsDate.toLocaleString("en-US", { month: "short" }),
+      day: jsDate.getDate(),
+      reason: selectedPatient.nextVisit.reason || "Scheduled visit",
+      hospital: selectedPatient.nextVisit.hospital || "To be assigned",
+      department: selectedPatient.nextVisit.department || null,
+      timeLabel: time,
+    };
+  }, [selectedPatient]);
 
   return (
     <div className="flex h-[calc(100vh-140px)] gap-6">
@@ -203,6 +264,23 @@ const PatientsView = ({ data, error, patientConnector }) => {
           >
             {banner.message}
           </div>
+        )}
+
+        {fetchError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Unable to sync patients from backend: {fetchError}
+          </div>
+        )}
+
+        {hasConnector && !fetchError && (
+          <div className="text-xs text-emerald-600">
+            Connected via PatientConnector{lastSyncedLabel ? ` - Last synced ${lastSyncedLabel}` : ""}
+            {isLoadingPatients && <span className="ml-2 text-slate-500">Updating...</span>}
+          </div>
+        )}
+
+        {hasConnector && fetchError && lastSyncedLabel && (
+          <div className="text-xs text-slate-500">Last successful sync: {lastSyncedLabel}</div>
         )}
 
         <Card className="flex-1 overflow-hidden p-0">
@@ -301,24 +379,36 @@ const PatientsView = ({ data, error, patientConnector }) => {
                 <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-100 dark:border-slate-700">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold text-teal-700 dark:text-teal-400">{selectedPatient.insurance}</span>
-                    <Badge color="green">Active</Badge>
+                    <Badge color={selectedPatient.insuranceStatus === "Active" ? "green" : "orange"}>
+                      {selectedPatient.insuranceStatus || "Unknown"}
+                    </Badge>
                   </div>
-                  <p className="text-xs text-slate-500">Policy #MAR-2023-8842</p>
+                  <p className="text-xs text-slate-500">
+                    {selectedPatient.policyNumber ? `Policy ${selectedPatient.policyNumber}` : "Policy pending assignment"}
+                  </p>
                 </div>
               </div>
 
               <div>
                 <h4 className="text-xs font-semibold uppercase text-slate-400 mb-3 tracking-wider">Next Visit</h4>
-                <div className="flex gap-3 items-start">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center flex-col leading-none border border-blue-100">
-                    <span className="text-[10px] font-bold uppercase">Oct</span>
-                    <span className="text-lg font-bold">24</span>
+                {nextVisitInfo ? (
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-shrink-0 w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center flex-col leading-none border border-blue-100">
+                      <span className="text-[10px] font-bold uppercase">{nextVisitInfo.month}</span>
+                      <span className="text-lg font-bold">{nextVisitInfo.day}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{nextVisitInfo.reason}</p>
+                      <p className="text-xs text-slate-500">
+                        {nextVisitInfo.hospital}
+                        {nextVisitInfo.department ? ` • ${nextVisitInfo.department}` : ""}
+                        {` • ${nextVisitInfo.timeLabel}`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Cardiology Checkup</p>
-                    <p className="text-xs text-slate-500">Rabat Central • 09:00 AM</p>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No upcoming visits scheduled.</p>
+                )}
               </div>
             </div>
 
