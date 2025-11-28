@@ -4,90 +4,128 @@ from datetime import date, time, datetime, timedelta
 from .models import *
 
 
-async def insert_patient(
-    conn: aiomysql.Connection,
-    patient: Patient,
-):
-    """Insert a new patient into the patients table.
-        Args:
-            conn (aiomysql.Connection): The database connection.
 
-
-        DB:
-        #### 2.1.3 `Patient`
-    - **Purpose:** Represents a person receiving care.
-    - **Primary key:** _IID_
-    - **Attributes:**
-      - `IID` (INT, PK)
-      - `CIN` (VARCHAR(10), UNIQUE, NOT NULL) – national ID
-      - `FullName` (VARCHAR(100), NOT NULL)
-      - `Birth` (DATE, NULL)
-      - `Sex` (ENUM('M','F'), NOT NULL)
-      - `BloodGroup` (ENUM('A+','A-','B+','B-','O+','O-','AB+','AB-'), NULL)
-      - `Phone` (VARCHAR(15), NULL)
-      - Optional extension (Lab 5 example): `Email` (VARCHAR(160), NULL)
-    - **Key FDs:** `IID → all non‑key attributes`; `CIN → IID, ...` (candidate key).
-    - **Relationships:**
-      - One‑to‑many with `ClinicalActivity` (each activity belongs to one patient).
-      - Many‑to‑many with `ContactLocation` via `have` / `PatientContact`.
-      - Many‑to‑many with `Insurance` via `PatientInsurance`.
-
-    """
-
-    async with conn.cursor() as cur:
-        await cur.execute(
-            """
-            INSERT INTO Patient (IID,CIN, FullName, Birth, Sex, BloodGroup, Phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                patient.iid,
-                patient.cin,
-                patient.full_name,
-                patient.birth,
-                patient.sex,
-                patient.blood_group,
-                patient.phone,
-            ),
-        )
-
-
-async def list_patients_ordered_by_last_name(
-    conn: aiomysql.Connection,
-    limit: int = 20,
-) -> List[Patient]:
-    """Retrieve all patients ordered by last name.
-
-    Args:
-        conn (aiomysql.Connection): The database connection.
-
-    Returns:
-        List of patients as dictionaries.
-    """
-
+async def get_all_patients(conn: aiomysql.Connection) -> List[Dict[str, Any]]:
+    """Get all patients with required fields."""
     async with conn.cursor(aiomysql.DictCursor) as cur:
-        await cur.execute(
-            """
-            SELECT P.IID, P.CIN, P.FullName, P.Birth, P.Sex, P.BloodGroup, P.Phone
-            FROM Patient P
-            ORDER BY SUBSTRING_INDEX(P.FullName, ' ', -1), P.FullName
-            LIMIT %s
-            """,
-            (limit,),
-        )
-        result = await cur.fetchall()
-        return [
-            Patient(
-                iid=row["IID"],
-                cin=row["CIN"],
-                full_name=row["FullName"],
-                birth=row["Birth"],
-                sex=row["Sex"],
-                blood_group=row["BloodGroup"],
-                phone=row["Phone"],
-            )
-            for row in result
-        ]
+        await cur.execute("""
+            SELECT 
+                IID as iid,
+                CIN as cin,
+                FullName as name,
+                Sex as sex,
+                Birth as birthDate,
+                BloodGroup as bloodGroup,
+                Phone as phone,
+                Email as email
+            FROM Patient
+            ORDER BY IID
+        """)
+        patients = await cur.fetchall()
+        
+        # Add required fields with defaults
+        for patient in patients:
+            patient['city'] = 'N/A'
+            patient['insurance'] = 'None'
+            patient['status'] = 'Outpatient'
+            if patient['birthDate']:
+                patient['birthDate'] = patient['birthDate'].isoformat()
+        
+        return patients
+
+async def create_patient(conn: aiomysql.Connection, patient_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a new patient in the actual database."""
+    async with conn.cursor() as cur:
+        await cur.execute("""
+            INSERT INTO Patient (IID, CIN, FullName, Birth, Sex, BloodGroup, Phone, Email)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            patient_data["iid"],
+            patient_data["cin"],
+            patient_data["full_name"],      # <-- correct mapping
+            patient_data.get("birth"),      # can be None
+            patient_data["sex"],
+            patient_data.get("blood_group"),
+            patient_data.get("phone"),
+            patient_data.get("email"),
+        ))
+
+    await conn.commit() 
+
+    return {
+        "iid": patient_data["iid"],
+        "cin": patient_data["cin"],
+        "name": patient_data["full_name"],
+        "sex": patient_data["sex"],
+        "birthDate": patient_data.get("birth"),
+        "bloodGroup": patient_data.get("blood_group"),
+        "phone": patient_data.get("phone"),
+        "email": patient_data.get("email"),
+        "city": "N/A",
+        "status": "Outpatient"
+    }
+
+
+async def get_all_staff(conn: aiomysql.Connection) -> List[Dict[str, Any]]:
+    """Get all staff with departments and hospitals."""
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute("""
+            SELECT 
+                s.STAFF_ID as id,
+                s.FullName as name,
+                s.Status as status,
+                GROUP_CONCAT(DISTINCT d.Name) as department_names,
+                GROUP_CONCAT(DISTINCT h.Name) as hospital_names
+            FROM Staff s
+            LEFT JOIN Work_in w ON w.STAFF_ID = s.STAFF_ID
+            LEFT JOIN Department d ON d.DEP_ID = w.DEP_ID
+            LEFT JOIN Hospital h ON h.HID = d.HID
+            GROUP BY s.STAFF_ID, s.FullName, s.Status
+        """)
+        staff_list = await cur.fetchall()
+        
+        # Add role and format arrays
+        for staff in staff_list:
+            # Simple role detection from name
+            if staff['name'].startswith('Dr.'):
+                staff['role'] = 'Doctor'
+            elif staff['name'].startswith('Nurse'):
+                staff['role'] = 'Nurse'
+            elif staff['name'].startswith('Technician'):
+                staff['role'] = 'Technician'
+            else:
+                staff['role'] = 'Admin'
+            
+            staff['departments'] = staff['department_names'].split(',') if staff['department_names'] else []
+            staff['hospitals'] = staff['hospital_names'].split(',') if staff['hospital_names'] else []
+            
+            # Remove the temporary fields
+            del staff['department_names']
+            del staff['hospital_names']
+        
+        return staff_list
+
+async def create_staff(conn: aiomysql.Connection, staff_data: Dict[str, Any]) -> Dict[str, Any]:
+    async with conn.cursor() as cur:
+        await cur.execute("""
+            INSERT INTO Staff (STAFF_ID, FullName, Status)
+            VALUES (%s, %s, %s)
+        """, (
+            staff_data["id"],
+            staff_data["name"],
+            staff_data.get("status", "Active"),
+        ))
+
+    await conn.commit()  
+
+    return {
+        "id": staff_data["id"],
+        "name": staff_data["name"],
+        "role": staff_data.get("role", "Staff"),
+        "departments": staff_data.get("departments", []),
+        "hospitals": staff_data.get("hospitals", []),
+        "status": staff_data.get("status", "Active")
+    }
 
 
 async def schedule_appointment(

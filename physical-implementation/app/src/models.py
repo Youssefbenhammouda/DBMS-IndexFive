@@ -6,15 +6,22 @@ from datetime import date, time
 # Patient model
 class Patient(BaseModel):
     iid: int
-
     cin: str
     full_name: str
     birth: Optional[date] = None
     sex: Literal["M", "F"]
-    blood_group: Optional[Literal["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]] = (
-        None
-    )
+    blood_group: Optional[
+        Literal["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
+    ] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class Staff(BaseModel):
+    id: int                       # STAFF_ID
+    name: str                     # FullName
+    status: Optional[str] = "Active"
+
 
 
 class MedicationStock(BaseModel):
