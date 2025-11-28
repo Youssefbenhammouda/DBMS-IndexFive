@@ -8,15 +8,12 @@
     - `patients` (array, required): each object must include
       - `iid` (integer) – primary identifier, unique per patient.
       - `cin` (string, max 10) – national ID, uppercase, unique.
-      - `name` (string, max 100) – full name.
+      - `full_name` (string, max 100) – full name.
       - `sex` ("M" | "F") – gender indicator.
-      - `birthDate` (string | null) – ISO date-only `YYYY-MM-DD`, nullable.
+      - `birth` (string | null) – ISO date-only `YYYY-MM-DD`, nullable.
       - `bloodGroup` (string | null) – one of `A+`, `A-`, `B+`, `B-`, `O+`, `O-`, `AB+`, `AB-`.
       - `phone` (string | null) – up to 15 chars, may include leading `+` and separators.
       - `email` (string | null) – valid email format, <=160 chars.
-      - `city` (string) – residence/city label; supply "N/A" when unknown.
-      - `insurance` (string) – one of the supported insurance plans or "None".
-      - `status` (string) – at minimum `Admitted` or `Outpatient`; additional values allowed but documented.
     - `lastSyncedAt` (string | null): ISO timestamp indicating when the payload was generated.
   - **Failure (4xx/5xx)**: JSON `{ "message": string }`; the UI shows the message in an inline banner without alteration.
 

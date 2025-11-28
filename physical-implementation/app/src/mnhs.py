@@ -25,8 +25,6 @@ async def get_all_patients(conn: aiomysql.Connection) -> List[Dict[str, Any]]:
         
         # Add required fields with defaults
         for patient in patients:
-            patient['city'] = 'N/A'
-            patient['insurance'] = 'None'
             patient['status'] = 'Outpatient'
             if patient['birthDate']:
                 patient['birthDate'] = patient['birthDate'].isoformat()
@@ -61,8 +59,6 @@ async def create_patient(conn: aiomysql.Connection, patient_data: Dict[str, Any]
         "bloodGroup": patient_data.get("blood_group"),
         "phone": patient_data.get("phone"),
         "email": patient_data.get("email"),
-        "city": "N/A",
-        "status": "Outpatient"
     }
 
 
