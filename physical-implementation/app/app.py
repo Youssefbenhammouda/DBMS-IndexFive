@@ -92,12 +92,18 @@ async def get_core_dashboard_stats(
 
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")
 @app.get("/api/medications",response_model=list[MedicationOut])
-async def get_medications(limit:int=50):
-    async with get_connection() as conn:
-        rows=await list_medications(conn,limit)
-        return rows
+async def get_medications(
+    limit:int=50,
+    conn:aiomysql.Connection=Depends(get_conn),
+):
+    rows=await list_medications(conn,limit)
+    return rows
+
 @app.post("/api/medications",status_code=201)
-async def post_medication(body:MedicationIn,conn:aiomysql.Connection=Depends(get_conn)):
+async def post_medication(
+    body:MedicationIn,
+    conn:aiomysql.Connection=Depends(get_conn),
+):
     try:
         await create_medication(
             conn,
@@ -113,5 +119,5 @@ async def post_medication(body:MedicationIn,conn:aiomysql.Connection=Depends(get
     except Exception as e:
         await conn.rollback()
         return JSONResponse(status_code=500,content={"message":str(e)})
-app.mount("/",StaticFiles(directory="dist",html=True),name="static") 
+
     

@@ -13,7 +13,7 @@ class MedicationIn(BaseModel):
     manufacturer:Optional[str]=None
 
 class MedicationOut(MedicationIn):
-    pass
+    model_config=ConfigDict(populate_by_name=True)
 
 async def list_medications(conn,limit=50):
     """
@@ -21,26 +21,33 @@ async def list_medications(conn,limit=50):
     """
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute(
-            """
-            SELECT MID,Name,Form,Strength,ActiveIngredient,
-            TherapeuticClass,Manufacturer
-            FROM Medication
-            ORDER BY Name
-            LIMIT %s
-            """,
-            (limit,)
-        )
-        return await cur.fetchall()
+        """
+        SELECT 
+            MID     AS mid,
+            Name    AS name,
+            Form    AS form,
+            Strength    AS strength,
+            ActiveIngredient    AS active_ingredient,
+            TherapeuticClass    AS therapeutic_class,
+            Manufacturer    AS manufacturer
+        FROM Medication
+        ORDER BY Name
+        LIMIT %s
+        """,
+            (limit,),
+    )
+    rows= await cur.fetchall()
+    return rows
     
 async def create_medication(
-        conn,
-        mid,
-        name,
-        form,
-        strength,
-        active_ingredient,
-        therapeutic_class,
-        manufacturer
+        conn:aiomysql.Connection,
+        mid:int,
+        name:str,
+        form:Optional[str],
+        strength:Optional[str],
+        active_ingredient:Optional[str],
+        therapeutic_class:Optional[str],
+        manufacturer:Optional[str],
 ):
     """
     POST
@@ -62,8 +69,8 @@ async def create_medication(
                     strength,
                     active_ingredient,
                     therapeutic_class,
-                    manufacturer
-                )
+                    manufacturer,
+                ),
             )
             await conn.commit()
         except Exception:
