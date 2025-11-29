@@ -89,4 +89,44 @@ async def get_core_dashboard_stats(
         return JSONResponse(status_code=500, content={"message": str(e)})
 
 
+@app.get("/api/billing", response_model=BillingResponse)
+async def get_billing(
+    query: BillingQueryParams = Depends(),
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    try:
+        return await get_billing_dashboard(conn, query)
+    except BillingAPIError as exc:
+        return JSONResponse(status_code=exc.status_code, content=exc.to_payload())
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content={"message": str(exc), "code": "BILLING_500"},
+        )
+
+
+@app.post(
+    "/api/billing/expense",
+    response_model=CreateExpenseResponse,
+    status_code=201,
+)
+async def post_billing_expense(
+    payload: CreateExpenseRequest,
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    try:
+        expense = await create_billing_expense(conn, payload)
+        await conn.commit()
+        return CreateExpenseResponse(expense=expense, message="Expense captured")
+    except BillingAPIError as exc:
+        await conn.rollback()
+        return JSONResponse(status_code=exc.status_code, content=exc.to_payload())
+    except Exception as exc:
+        await conn.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={"message": str(exc), "code": "BILLING_500"},
+        )
+
+
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")

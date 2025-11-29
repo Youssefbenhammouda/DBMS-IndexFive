@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import Annotated, List, Literal, Optional
-from datetime import date, time
+"""Compatibility exports for legacy model imports.
 
+The dedicated billing models now live in ``src.pages.billing``. Importing this
+module keeps ``from src.models import *`` working without refactoring existing
+callers.
+"""
 
-# Patient model
-
-# /api/core-dashboard
+from .pages.billing import *  # noqa: F401,F403 re-export billing models
