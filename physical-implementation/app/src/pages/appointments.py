@@ -112,14 +112,22 @@ async def schedule_appointment(
     try:
         async with conn.cursor() as cur:
             # Resolve patient IID
-            await cur.execute("SELECT IID FROM Patient WHERE FullName=%s", (patient_name,))
+            if str(patient_name).isdigit():
+                await cur.execute("SELECT IID FROM Patient WHERE IID=%s", (patient_name,))
+            else:
+                await cur.execute("SELECT IID FROM Patient WHERE FullName=%s", (patient_name,))
+            
             patient_row = await cur.fetchone()
             if not patient_row:
                 raise ValueError(f"Patient '{patient_name}' not found")
             iid = patient_row[0]
 
             # Resolve staff id
-            await cur.execute("SELECT STAFF_ID FROM Staff WHERE STAFF_ID=%s", (staff_name,))
+            if str(staff_name).isdigit():
+                await cur.execute("SELECT STAFF_ID FROM Staff WHERE STAFF_ID=%s", (staff_name,))
+            else:
+                await cur.execute("SELECT STAFF_ID FROM Staff WHERE FullName=%s", (staff_name,))
+
             staff_row = await cur.fetchone()
             if not staff_row:
                 raise ValueError(f"Staff '{staff_name}' not found")

@@ -230,10 +230,17 @@ async def post_appointments(
 ):
     try:
         data = await request.json()
+        
+        # Parse time flexibly
+        try:
+            t = datetime.strptime(data["time"], "%H:%M").time()
+        except ValueError:
+            t = datetime.strptime(data["time"], "%H:%M:%S").time()
+
         result = await schedule_appointment(
             conn=conn,
             date_=datetime.strptime(data["date"], "%Y-%m-%d").date(),
-            time_=datetime.strptime(data["time"], "%H:%M").time(),
+            time_=t,
             hospital_name=data["hospital"],
             department_name=data["department"],
             patient_name=data["patient"],
