@@ -24,83 +24,91 @@ class StockEntryIn(BaseModel):
 
 
 async def create_medication(conn: aiomysql.Connection, med: MedicationIn) -> dict:
-    query = """
-        INSERT INTO medications (id, name, hospital, qty, reorder_level, unit, class)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute("SELECT HID FROM Hospital WHERE Name = %s", (med.hospital,))
+        row = await cur.fetchone()
+        if row is None:
+            raise ValueError(f"Unknown hospital: {med.hospital}")
+        hid = row["HID"]
+
+    mid = int(med.id)
+
     async with conn.cursor() as cur:
-        await cur.execute(
-            query,
-            (
-                med.id,
-                med.name,
-                med.hospital,
-                med.qty,
-                med.reorderLevel,
-                med.unit,
-                med.class_,
-            ),
-        )
-    await conn.commit()
+        try:
+            await cur.execute(
+                """
+                INSERT INTO Medication (MID, Name, TherapeuticClass)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    Name = VALUES(Name),
+                    TherapeuticClass = VALUES(TherapeuticClass)
+                """,
+                (mid, med.name, med.class_),
+            )
+
+            await cur.execute(
+                """
+                INSERT INTO Stock (
+                    HID, MID, StockTimestamp, UnitPrice, Qty, ReorderLevel
+                )
+                VALUES (%s, %s, NOW(), NULL, %s, %s)
+                """,
+                (hid, mid, med.qty, med.reorderLevel),
+            )
+
+            await conn.commit()
+        except Exception:
+            await conn.rollback()
+            raise
+
     return med.model_dump(by_alias=True)
 
-
 async def insert_stock_entry(conn: aiomysql.Connection, s: StockEntryIn) -> dict:
-    query = """
-        INSERT INTO medication_stock (
-            medication_id, medication_name, hospital, qty_received, unit_price, received_at
-        ) VALUES (%s, %s, %s, %s, %s, NOW())
     """
-    async with conn.cursor() as cur:
-        await cur.execute(
-            query,
-            (
-                s.medicationId,
-                s.medicationName,
-                s.hospital,
-                s.qtyReceived,
-                s.unitPrice,
-            ),
-        )
-    await conn.commit()
-    return s.model_dump()
-
-
-async def get_low_stock(
-    conn: aiomysql.Connection,
-    hospital: Optional[str] = None,
-    class_: Optional[str] = None,
-    only_low_stock: bool = False,
-) -> list[dict]:
-    query = """
-        SELECT id, name, hospital, qty, reorder_level, unit, class
-        FROM medications
-        WHERE 1=1
+    Utilise la table Stock du prof : (HID, MID, StockTimestamp, UnitPrice, Qty, ReorderLevel)
     """
-    params: list = []
-
-    if hospital:
-        query += " AND hospital = %s"
-        params.append(hospital)
-    if class_:
-        query += " AND class = %s"
-        params.append(class_)
-    if only_low_stock:
-        query += " AND qty <= reorder_level"
-
     async with conn.cursor(aiomysql.DictCursor) as cur:
-        await cur.execute(query, params)
-        rows = await cur.fetchall()
+        await cur.execute("SELECT HID FROM Hospital WHERE Name = %s", (s.hospital,))
+        row = await cur.fetchone()
+        if row is None:
+            raise ValueError(f"Unknown hospital: {s.hospital}")
+        hid = row["HID"]
 
-    return [
-        {
-            "id": r["id"],
-            "name": r["name"],
-            "hospital": r["hospital"],
-            "qty": r["qty"],
-            "reorderLevel": r["reorder_level"],
-            "unit": r["unit"],
-            "class": r.get("class"),
-        }
-        for r in rows
-    ]
+    mid = int(s.medicationId)
+
+    async with conn.cursor() as cur:
+        try:
+            await cur.execute(
+                """
+                SELECT ReorderLevel
+                FROM Stock
+                WHERE HID = %s AND MID = %s
+                ORDER BY StockTimestamp DESC
+                LIMIT 1
+                """,
+                (hid, mid),
+            )
+            row = await cur.fetchone()
+            reorder_level = row[0] if row is not None else 10
+
+            await cur.execute(
+                """
+                INSERT INTO Stock (
+                    HID, MID, StockTimestamp, UnitPrice, Qty, ReorderLevel
+                )
+                VALUES (%s, %s, NOW(), %s, %s, %s)
+                """,
+                (hid, mid, s.unitPrice, s.qtyReceived, reorder_level),
+            )
+
+            await conn.commit()
+        except Exception:
+            await conn.rollback()
+            raise
+    return {
+        "medicationId": s.medicationId,
+        "medicationName": s.medicationName,
+        "hospital": s.hospital,
+        "qtyReceived": s.qtyReceived,
+        "unitPrice": s.unitPrice,
+    }

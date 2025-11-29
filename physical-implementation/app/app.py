@@ -144,27 +144,25 @@ async def post_billing_expense(
         )
 # GET /api/medications
 @app.get("/api/medications")
+@app.get("/api/medications")
 async def get_medications(
     pageKey: str | None = None,
     hospital: str | None = None,
     class_: str | None = None,
     onlyLowStock: bool = False,
 ):
-    try:
-        return {
-            "lowStock": [],
-            "pricingSummary": [],
-            "priceSeries": [],
-            "replenishmentTrend": [],
-            "aggregates": {
-                "criticalAlerts": 0,
-                "avgStockGapPct": 0.0,
-                "projectedMonthlySpend": 0.0,
-            },
-            "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
-        }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"message": str(e)})
+    return {
+        "lowStock": [],
+        "pricingSummary": [],
+        "priceSeries": [],
+        "replenishmentTrend": [],
+        "aggregates": {
+            "criticalAlerts": 0,
+            "avgStockGapPct": 0.0,
+            "projectedMonthlySpend": 0.0,
+        },
+        "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
+    }
 
 
 # POST /api/medications
@@ -179,6 +177,8 @@ async def post_medication(
             "medication": med,
             "message": "Medication created",
         }
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"message": str(e)})
     except Exception as e:
         await conn.rollback()
         return JSONResponse(status_code=500, content={"message": str(e)})
@@ -207,6 +207,8 @@ async def post_medication_stock(
             "stockEntry": stock,
             "message": "Stock entry recorded",
         }
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"message": str(e)})
     except Exception as e:
         await conn.rollback()
         return JSONResponse(status_code=500, content={"message": str(e)})
