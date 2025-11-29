@@ -5,6 +5,7 @@ import Card from "../components/common/Card";
 import Modal from "../components/common/Modal";
 
 const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+const APPOINTMENT_STATUS_OPTIONS = ["Scheduled", "Completed", "Cancelled", "No Show"];
 const INITIAL_FORM_STATE = {
   iid: "",
   cin: "",
@@ -17,7 +18,17 @@ const INITIAL_FORM_STATE = {
   city: "",
 };
 
-const PatientsView = ({ data, error, patientConnector }) => {
+const buildDefaultAppointmentForm = (patientName) => ({
+  date: new Date().toISOString().split("T")[0],
+  time: "09:00",
+  hospital: "",
+  department: "",
+  staff: "",
+  reason: patientName ? `Consultation for ${patientName}` : "",
+  status: "Scheduled",
+});
+
+const PatientsView = ({ data, error, patientConnector, appointmentConnector }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patients, setPatients] = useState(() => data?.patients ?? []);
@@ -26,9 +37,15 @@ const PatientsView = ({ data, error, patientConnector }) => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [banner, setBanner] = useState(null);
+  const [submissionError, setSubmissionError] = useState(null);
   const [syncedAt, setSyncedAt] = useState(data?.lastSyncedAt ?? null);
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleValues, setScheduleValues] = useState(() => buildDefaultAppointmentForm());
+  const [scheduleErrors, setScheduleErrors] = useState({});
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleSubmissionError, setScheduleSubmissionError] = useState(null);
 
   useEffect(() => {
     if (Array.isArray(data?.patients)) {
@@ -96,11 +113,27 @@ const PatientsView = ({ data, error, patientConnector }) => {
   const handleOpenModal = () => {
     setFormValues(INITIAL_FORM_STATE);
     setFormErrors({});
+    setSubmissionError(null);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
+    setSubmissionError(null);
     setIsModalOpen(false);
+  };
+
+  const handleOpenScheduleModal = () => {
+    if (!selectedPatient) return;
+    setScheduleValues(buildDefaultAppointmentForm(selectedPatient.name));
+    setScheduleErrors({});
+    setScheduleSubmissionError(null);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleCloseScheduleModal = () => {
+    setScheduleErrors({});
+    setScheduleSubmissionError(null);
+    setIsScheduleModalOpen(false);
   };
 
   const handleInputChange = (field) => (event) => {
@@ -108,6 +141,14 @@ const PatientsView = ({ data, error, patientConnector }) => {
     setFormValues((prev) => ({
       ...prev,
       [field]: field === "cin" ? value.toUpperCase() : value,
+    }));
+  };
+
+  const handleScheduleInputChange = (field) => (event) => {
+    const value = event.target.value;
+    setScheduleValues((prev) => ({
+      ...prev,
+      [field]: value,
     }));
   };
 
@@ -151,11 +192,24 @@ const PatientsView = ({ data, error, patientConnector }) => {
     return { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail, trimmedCity };
   };
 
+  const validateScheduleForm = () => {
+    const errors = {};
+    if (!scheduleValues.date) errors.date = "Date is required";
+    if (!scheduleValues.time) errors.time = "Time is required";
+    if (!scheduleValues.hospital.trim()) errors.hospital = "Hospital is required";
+    if (!scheduleValues.department.trim()) errors.department = "Department is required";
+    if (!scheduleValues.staff.trim()) errors.staff = "Staff is required";
+    if (!scheduleValues.reason.trim()) errors.reason = "Reason is required";
+    if (!APPOINTMENT_STATUS_OPTIONS.includes(scheduleValues.status)) errors.status = "Invalid status";
+    return errors;
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail, trimmedCity } = validateForm();
     if (Object.keys(errors).length) {
       setFormErrors(errors);
+      setSubmissionError(null);
       return;
     }
 
@@ -177,6 +231,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
     };
 
     setIsSubmitting(true);
+    setSubmissionError(null);
 
     try {
       const response = await patientConnector.addPatient(requestPayload);
@@ -203,13 +258,77 @@ const PatientsView = ({ data, error, patientConnector }) => {
       setSelectedPatient(normalized);
       setFormValues(INITIAL_FORM_STATE);
       setFormErrors({});
+      setSubmissionError(null);
       setIsModalOpen(false);
       showBanner("success", response?.message || "Patient added successfully.");
       refreshPatients({ forceRefresh: true, silent: true });
     } catch (apiError) {
-      showBanner("error", apiError?.message || "Failed to add patient. Please try again.");
+      setSubmissionError(apiError?.message || "Failed to add patient. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleScheduleSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedPatient) {
+      setScheduleSubmissionError("Please select a patient first.");
+      return;
+    }
+
+    const errors = validateScheduleForm();
+    if (Object.keys(errors).length) {
+      setScheduleErrors(errors);
+      setScheduleSubmissionError(null);
+      return;
+    }
+    setScheduleErrors({});
+
+    if (!appointmentConnector) {
+      setScheduleSubmissionError("Appointment connector not available. Please reload and try again.");
+      return;
+    }
+
+    const targetPatientId = selectedPatient.iid;
+    const patientName = selectedPatient.name;
+
+    const trimmedHospital = scheduleValues.hospital.trim();
+    const trimmedDepartment = scheduleValues.department.trim();
+    const trimmedStaff = scheduleValues.staff.trim();
+    const trimmedReason = scheduleValues.reason.trim();
+
+    const payload = {
+      ...scheduleValues,
+      hospital: trimmedHospital,
+      department: trimmedDepartment,
+      staff: trimmedStaff,
+      reason: trimmedReason,
+      patient: patientName,
+    };
+
+    setIsScheduling(true);
+    setScheduleSubmissionError(null);
+
+    try {
+      const response = await appointmentConnector.addAppointment(payload);
+      const nextVisit = {
+        date: scheduleValues.date,
+        time: scheduleValues.time,
+        hospital: trimmedHospital,
+        department: trimmedDepartment,
+        reason: trimmedReason,
+      };
+      setPatients((prev) => prev.map((p) => (p.iid === targetPatientId ? { ...p, nextVisit } : p)));
+      setSelectedPatient((prev) => (prev && prev.iid === targetPatientId ? { ...prev, nextVisit } : prev));
+      setScheduleValues(buildDefaultAppointmentForm(patientName));
+      setScheduleErrors({});
+      showBanner("success", response?.message || "Appointment scheduled successfully.");
+      setIsScheduleModalOpen(false);
+      refreshPatients({ forceRefresh: true, silent: true });
+    } catch (scheduleError) {
+      setScheduleSubmissionError(scheduleError?.message || "Failed to schedule appointment.");
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -281,7 +400,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
 
         {hasConnector && !fetchError && (
           <div className="text-xs text-emerald-600">
-            Connected via PatientConnector{lastSyncedLabel ? ` - Last synced ${lastSyncedLabel}` : ""}
+            {lastSyncedLabel ? `Last synced ${lastSyncedLabel}` : ""}
             {isLoadingPatients && <span className="ml-2 text-slate-500">Updating...</span>}
           </div>
         )}
@@ -419,7 +538,16 @@ const PatientsView = ({ data, error, patientConnector }) => {
               </div>
             </div>
 
-            <button className="w-full mt-4 py-2.5 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+            <button
+              type="button"
+              onClick={handleOpenScheduleModal}
+              disabled={!selectedPatient || !appointmentConnector}
+              className={`w-full mt-4 py-2.5 rounded-lg text-sm font-medium transition-opacity ${
+                !selectedPatient || !appointmentConnector
+                  ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                  : "bg-slate-900 dark:bg-white dark:text-slate-900 text-white hover:opacity-90"
+              }`}
+            >
               Schedule Appointment
             </button>
           </Card>
@@ -428,6 +556,11 @@ const PatientsView = ({ data, error, patientConnector }) => {
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add New Patient">
         <form className="space-y-4" onSubmit={handleSubmit}>
+          {submissionError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+              {submissionError}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IID *</label>
@@ -578,6 +711,139 @@ const PatientsView = ({ data, error, patientConnector }) => {
               }`}
             >
               {isSubmitting ? "Saving..." : "Save Patient"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isScheduleModalOpen} onClose={handleCloseScheduleModal} title="Schedule Appointment">
+        <form className="space-y-4" onSubmit={handleScheduleSubmit}>
+          {scheduleSubmissionError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+              {scheduleSubmissionError}
+            </div>
+          )}
+
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 px-4 py-3 text-sm">
+            <p className="font-medium text-slate-800 dark:text-slate-100">{selectedPatient?.name}</p>
+            <p className="text-slate-500 text-xs">IID {selectedPatient?.iid} • CIN {selectedPatient?.cin}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date *</label>
+              <input
+                type="date"
+                value={scheduleValues.date}
+                onChange={handleScheduleInputChange("date")}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  scheduleErrors.date ? "border-red-500" : ""
+                }`}
+              />
+              {scheduleErrors.date && <p className="text-xs text-red-500 mt-1">{scheduleErrors.date}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Time *</label>
+              <input
+                type="time"
+                value={scheduleValues.time}
+                onChange={handleScheduleInputChange("time")}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  scheduleErrors.time ? "border-red-500" : ""
+                }`}
+              />
+              {scheduleErrors.time && <p className="text-xs text-red-500 mt-1">{scheduleErrors.time}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Hospital *</label>
+            <input
+              type="text"
+              value={scheduleValues.hospital}
+              onChange={handleScheduleInputChange("hospital")}
+              placeholder="e.g., Rabat Central"
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                scheduleErrors.hospital ? "border-red-500" : ""
+              }`}
+            />
+            {scheduleErrors.hospital && <p className="text-xs text-red-500 mt-1">{scheduleErrors.hospital}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department *</label>
+            <input
+              type="text"
+              value={scheduleValues.department}
+              onChange={handleScheduleInputChange("department")}
+              placeholder="e.g., Cardiology"
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                scheduleErrors.department ? "border-red-500" : ""
+              }`}
+            />
+            {scheduleErrors.department && <p className="text-xs text-red-500 mt-1">{scheduleErrors.department}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned Staff *</label>
+            <input
+              type="text"
+              value={scheduleValues.staff}
+              onChange={handleScheduleInputChange("staff")}
+              placeholder="e.g., Dr. Idrissi"
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                scheduleErrors.staff ? "border-red-500" : ""
+              }`}
+            />
+            {scheduleErrors.staff && <p className="text-xs text-red-500 mt-1">{scheduleErrors.staff}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Reason *</label>
+            <textarea
+              value={scheduleValues.reason}
+              onChange={handleScheduleInputChange("reason")}
+              rows={3}
+              placeholder="Follow-up, consultation, etc."
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                scheduleErrors.reason ? "border-red-500" : ""
+              }`}
+            />
+            {scheduleErrors.reason && <p className="text-xs text-red-500 mt-1">{scheduleErrors.reason}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status *</label>
+            <select
+              value={scheduleValues.status}
+              onChange={handleScheduleInputChange("status")}
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                scheduleErrors.status ? "border-red-500" : ""
+              }`}
+            >
+              {APPOINTMENT_STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            {scheduleErrors.status && <p className="text-xs text-red-500 mt-1">{scheduleErrors.status}</p>}
+          </div>
+
+          <p className="text-xs text-slate-500">All fields are required to create an appointment.</p>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={handleCloseScheduleModal} className="px-4 py-2 text-slate-600 font-medium">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isScheduling}
+              className={`px-4 py-2 rounded-lg font-medium text-white ${
+                isScheduling ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800"
+              }`}
+            >
+              {isScheduling ? "Scheduling..." : "Confirm"}
             </button>
           </div>
         </form>

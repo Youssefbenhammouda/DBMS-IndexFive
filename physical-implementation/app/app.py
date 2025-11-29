@@ -28,6 +28,7 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.db_pool = await create_pool()
+
     yield
 
 

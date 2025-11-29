@@ -1,5 +1,7 @@
 import asyncio
 import os
+from typing import Dict
+
 import aiomysql
 from dotenv import load_dotenv
 
@@ -27,6 +29,15 @@ async def create_pool() -> aiomysql.Pool:
     )
 
 
-
-
-
+AUTO_INCREMENT_TARGETS: Dict[str, str] = {
+    "Hospital": "HID",
+    "Department": "DEP_ID",
+    "Staff": "STAFF_ID",
+    "Patient": "IID",
+    "Insurance": "InsID",
+    "Medication": "MID",
+    "ClinicalActivity": "CAID",
+    "Expense": "ExpID",
+    "Prescription": "PID",
+    "ContactLocation": "CLID",
+}

@@ -154,7 +154,14 @@ export default function MNHSAdmin() {
       case "Overview":
           return <OverviewView data={dataForPage} error={errorForPage} onNavigate={setActivePage} />;
       case "Patients":
-        return <PatientsView data={dataForPage} error={errorForPage} patientConnector={patientConnector} />;
+        return (
+          <PatientsView
+            data={dataForPage}
+            error={errorForPage}
+            patientConnector={patientConnector}
+            appointmentConnector={appointmentConnector}
+          />
+        );
       case "Appointments":
         return (
           <AppointmentsView
