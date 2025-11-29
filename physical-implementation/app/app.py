@@ -217,16 +217,17 @@ async def post_medication_stock(
         return JSONResponse(status_code=500, content={"message": str(exc)})
 
 
-app.mount("/", StaticFiles(directory="dist", html=True), name="static")
-
 # GET /api/appointments
 @app.get("/api/appointments")
 async def get_appointments(conn: aiomysql.Connection = Depends(get_conn)):
     data = await get_all_appointments(conn)
     return data
 
+
 @app.post("/api/appointments", status_code=201)
-async def post_appointments(request: Request, conn: aiomysql.Connection = Depends(get_conn)):
+async def post_appointments(
+    request: Request, conn: aiomysql.Connection = Depends(get_conn)
+):
     try:
         data = await request.json()
         result = await schedule_appointment(
@@ -238,9 +239,13 @@ async def post_appointments(request: Request, conn: aiomysql.Connection = Depend
             patient_name=data["patient"],
             staff_name=data["staff"],
             reason=data["reason"],
-            status=data["status"]
+            status=data["status"],
         )
         return result
     except Exception as e:
         await conn.rollback()
         return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+#
+app.mount("/", StaticFiles(directory="dist", html=True), name="static")

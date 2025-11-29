@@ -5,17 +5,17 @@ from datetime import date, time
 from datetime import datetime, date, time
 
 
-async def get_all_appointments (
-        conn: aiomysql.Connection,
-        date_range: Optional[str] = None,
-        status: Optional[str] = None,
-        hospital: Optional[str] = None
+async def get_all_appointments(
+    conn: aiomysql.Connection,
+    date_range: Optional[str] = None,
+    status: Optional[str] = None,
+    hospital: Optional[str] = None,
 ) -> Dict:
     async with conn.cursor(aiomysql.DictCursor) as cur:
         # Base query joining ClinicalActivity, Appointment, Patient, Staff, Department, Hospital
         query = """
                 SELECT 
-                    a.CAID AS id,
+                    ap.CAID AS id,
                     ca.Date AS date,
                     ca.Time AS time,
                     h.Name AS hospital,
@@ -32,7 +32,7 @@ async def get_all_appointments (
                 JOIN Hospital h ON d.HID = h.HID
                 WHERE 1=1
                 """
-        
+
         params = []
 
         # Apply filters if provided
@@ -52,25 +52,26 @@ async def get_all_appointments (
         await cur.execute(query, params)
         results = await cur.fetchall()
 
-        #Format date and time as strings
+        # Format date and time as strings
         appointments = []
         for row in results:
-            appointments.append({
-                "id" : f"APT-{row['id']}",
-                "date" : row['date'].strftime("%Y-%m-%d"),
-                "time" : row['time'].strftime("%H:%M") if row['time'] else None,
-                "hospital" : row['hospital'],
-                "department" : row['department'],
-                "patient" : row['patient'],
-                "staff" : row['staff'],
-                "reason" : row['reason'],
-                "status" : row['status']
-            })
+            appointments.append(
+                {
+                    "id": f"APT-{row['id']}",
+                    "date": row["date"].strftime("%Y-%m-%d"),
+                    "time": row["time"].strftime("%H:%M") if row["time"] else None,
+                    "hospital": row["hospital"],
+                    "department": row["department"],
+                    "patient": row["patient"],
+                    "staff": row["staff"],
+                    "reason": row["reason"],
+                    "status": row["status"],
+                }
+            )
     return {
-        "appointments" : appointments,
-        "lastSyncedAt" : datetime.utcnow().isoformat() + 'Z'
+        "appointments": appointments,
+        "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
     }
-
 
 
 async def schedule_appointment(
@@ -86,7 +87,7 @@ async def schedule_appointment(
     appointment_id: Optional[str] = None,
 ) -> Dict:
     async with conn.cursor() as cur:
-        #Resolve Patient ID
+        # Resolve Patient ID
         await cur.execute("SELECT IID FROM Patient WHERE FullName=%s", (patient_name,))
         patient_row = await cur.fetchone()
         if not patient_row:
@@ -106,12 +107,14 @@ async def schedule_appointment(
             SELECT d.DEP_ID FROM Department d
             JOIN Hospital h ON d.HID = h.HID
             WHERE d.Name=%s AND h.Name=%s
-            """, 
-            (department_name, hospital_name)
+            """,
+            (department_name, hospital_name),
         )
         dep_row = await cur.fetchone()
         if not dep_row:
-            raise ValueError(f"Department '{department_name}' in Hospital '{hospital_name}' not found")
+            raise ValueError(
+                f"Department '{department_name}' in Hospital '{hospital_name}' not found"
+            )
         dep_id = dep_row[0]
 
         # Insert into ClinicalActivity
@@ -120,24 +123,24 @@ async def schedule_appointment(
             INSERT INTO ClinicalActivity (IID, STAFF_ID, DEP_ID, Date, Time)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (idd, staff_id, dep_id, date_, time_)
+            (idd, staff_id, dep_id, date_, time_),
         )
 
         caid = cur.lastrowid
 
-        #Insert into Appointment
+        # Insert into Appointment
         await cur.execute(
             """
             INSERT INTO Appointment (CAID, Reason, Status)
             VALUES (%s, %s, %s)
             """,
-            (caid, reason, status)
+            (caid, reason, status),
         )
 
-        #Commit changes
+        # Commit changes
         await conn.commit()
 
-    return{
+    return {
         "appointment": {
             "id": f"APT-{caid}",
             "date": date_.strftime("%Y-%m-%d"),
@@ -147,7 +150,7 @@ async def schedule_appointment(
             "patient": patient_name,
             "staff": staff_name,
             "reason": reason,
-            "status": status
+            "status": status,
         },
-        "message": "Appointment created"
+        "message": "Appointment created",
     }
