@@ -46,7 +46,14 @@ app.add_middleware(
 async def get_conn() -> AsyncIterator[aiomysql.Connection]:
     pool = app.state.db_pool
     async with pool.acquire() as conn:
-        yield conn
+        try:
+            yield conn
+            if not conn.get_autocommit():
+                await conn.commit()
+        except Exception:
+            if not conn.get_autocommit():
+                await conn.rollback()
+            raise
 
 
 # GET /api/patients - Simple version

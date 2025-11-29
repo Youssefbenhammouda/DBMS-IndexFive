@@ -44,13 +44,20 @@ export default function MNHSAdmin() {
     return (configuredBaseUrl && configuredBaseUrl.trim()) || "http://127.0.0.1:8000/api";
   }, []);
 
+  const shouldUsePatientMocks = useMemo(
+    () => String(import.meta.env?.VITE_USE_PATIENT_MOCKS ?? "").toLowerCase() === "true",
+    [],
+  );
+
   const backendConnector = useMemo(() => {
     const connector = new BackendConnector({ baseUrl: apiBaseUrl });
-    registerPatientMockServer(connector);
+    if (shouldUsePatientMocks) {
+      registerPatientMockServer(connector);
+    }
     registerAppointmentMockServer(connector);
     registerMedicationsMockServer(connector);
     return connector;
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, shouldUsePatientMocks]);
 
   const modelConnector = useMemo(() => {
     const connector = new ModelConnector(backendConnector);

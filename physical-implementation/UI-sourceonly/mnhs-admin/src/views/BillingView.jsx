@@ -477,12 +477,12 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
           Failed to refresh billing data: {error}
         </div>
       )}
       {!usingLiveData && !error && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
           No billing data returned yet. Adjust filters or retry once the backend is available.
         </div>
       )}
@@ -490,13 +490,13 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
         <div className="flex flex-col gap-1 text-xs">
           {hasConnector && usingLiveData ? (
             <>
-              <span className="text-emerald-600">
+              <span className="text-emerald-600 dark:text-emerald-400">
                 {lastSyncedLabel ? `Last synced ${lastSyncedLabel}` : ""}
               </span>
-              <span className="text-slate-500">Scope: {filtersSummary}</span>
+              <span className="text-slate-500 dark:text-slate-400">Scope: {filtersSummary}</span>
             </>
           ) : (
-            <span className="text-slate-500">Scope: {filtersSummary}</span>
+            <span className="text-slate-500 dark:text-slate-400">Scope: {filtersSummary}</span>
           )}
         </div>
         <div className="flex flex-col items-stretch gap-2 md:items-end">
@@ -504,8 +504,8 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             <div
               className={`text-xs px-3 py-2 rounded-lg border ${
                 formStatus.type === "success"
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-red-50 border-red-200 text-red-700"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-200"
+                  : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200"
               }`}
             >
               {formStatus.message}
@@ -518,7 +518,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               hasConnector
                 ? "bg-teal-600 text-white hover:bg-teal-700"
-                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400"
             }`}
           >
             <Plus className="w-4 h-4" /> Capture Expense
@@ -529,11 +529,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
       <Card>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Hospital</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Hospital</label>
             <select
               value={filterForm.hospitalId}
               onChange={handleFilterFieldChange("hospitalId")}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
             >
               <option value="">All hospitals</option>
               {hospitalFilterOptions.map((option) => (
@@ -545,11 +545,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Department</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Department</label>
             <select
               value={filterForm.departmentId}
               onChange={handleFilterFieldChange("departmentId")}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
             >
               <option value="">All departments</option>
               {departmentFilterOptions.map((option) => (
@@ -561,11 +561,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Coverage</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Coverage</label>
             <select
               value={filterForm.insuranceId}
               onChange={handleFilterFieldChange("insuranceId")}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
             >
               {coverageFilterOptions.map((option) => (
                 <option key={option.value || "all"} value={option.value}>
@@ -576,11 +576,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Window</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Window</label>
             <select
               value={filterForm.daysBack}
               onChange={handleFilterFieldChange("daysBack")}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
             >
               {daysBackOptions.map((value) => (
                 <option key={value} value={value.toString()}>
@@ -594,7 +594,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           <button
             type="button"
             onClick={handleClearFilters}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 border border-slate-200 dark:border-slate-700"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30"
             disabled={isDefaultFilterState}
           >
             Reset
@@ -604,7 +604,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             onClick={handleApplyFilters}
             disabled={!canApplyFilters}
             className={`px-4 py-2 rounded-lg text-sm font-semibold text-white ${
-              canApplyFilters ? "bg-teal-600 hover:bg-teal-700" : "bg-slate-300 cursor-not-allowed"
+              canApplyFilters ? "bg-teal-600 hover:bg-teal-700" : "bg-slate-300 cursor-not-allowed dark:bg-slate-700"
             }`}
           >
             Apply Filters
@@ -657,13 +657,13 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
                 <div key={bucket.type} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{bucket.type}</p>
-                    <p className="text-xs text-slate-500">{bucket.activities} activities</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{bucket.activities} activities</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                       {formatCurrency(bucket.amount, { compact: true })}
                     </p>
-                    <p className="text-xs text-slate-500">{bucket.resolvedShare}% share</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{bucket.resolvedShare}% share</p>
                   </div>
                 </div>
               ))}
@@ -674,14 +674,14 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
         <Card title="Medication Utilization Snapshot">
           <div className="space-y-4">
             {medicationSnapshot.length === 0 && (
-              <p className="text-sm text-slate-500">No prescriptions recorded for the selected filters.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No prescriptions recorded for the selected filters.</p>
             )}
             {medicationSnapshot.map((med) => (
               <div key={med.mid} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{med.name}</p>
-                    <p className="text-xs text-slate-500">{med.therapeuticClass} - {med.shareLabel}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{med.therapeuticClass} - {med.shareLabel}</p>
                   </div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{med.prescriptions} rx</p>
                 </div>
@@ -701,7 +701,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
         <Card className="xl:col-span-2" title="Hospital Billing Overview">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-slate-500">
+              <thead className="text-left text-slate-500 dark:text-slate-300">
                 <tr>
                   <th className="py-3 px-4">Hospital</th>
                   <th className="py-3 px-4">Region</th>
@@ -715,18 +715,18 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
                 {hospitalPreview.map((row) => (
                   <tr key={row.hid}>
                     <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-100">{row.name}</td>
-                    <td className="py-3 px-4 text-slate-500">{row.region}</td>
-                    <td className="py-3 px-4 text-right">{row.activities?.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right">{formatPercentLabel(row.insuredShare)}</td>
-                    <td className="py-3 px-4 text-right">{formatCurrency(row.avgExpense, { minimumFractionDigits: 0 })}</td>
-                    <td className="py-3 px-4 text-right font-semibold">
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{row.region}</td>
+                    <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-200">{row.activities?.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-200">{formatPercentLabel(row.insuredShare)}</td>
+                    <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-200">{formatCurrency(row.avgExpense, { minimumFractionDigits: 0 })}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-slate-800 dark:text-slate-100">
                       {formatCurrency(row.total, { minimumFractionDigits: 0 })}
                     </td>
                   </tr>
                 ))}
                 {!hospitalPreview.length && (
                   <tr>
-                    <td className="py-6 text-center text-slate-500" colSpan={6}>
+                    <td className="py-6 text-center text-slate-500 dark:text-slate-400" colSpan={6}>
                       No hospital data for the selected filters.
                     </td>
                   </tr>
@@ -739,7 +739,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
         <Card title="Department Leaderboard">
           <div className="space-y-4">
             {departmentLeaders.leaders.length === 0 && (
-              <p className="text-sm text-slate-500">No department activity recorded.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No department activity recorded.</p>
             )}
             {departmentLeaders.leaders.map((dept) => {
               const isAboveAverage = departmentLeaders.avg && dept.total >= departmentLeaders.avg;
@@ -748,11 +748,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{dept.department}</p>
-                      <p className="text-xs text-slate-500">{dept.hospital} - {dept.specialty}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{dept.hospital} - {dept.specialty}</p>
                     </div>
                     {isAboveAverage && <Badge color="green">Above avg</Badge>}
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>{dept.activities} activities</span>
                     {typeof dept.avgExpense === "number" && (
                       <span>Avg {formatCurrency(dept.avgExpense, { minimumFractionDigits: 0 })}</span>
@@ -774,7 +774,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           <select
             value={insuranceFilter}
             onChange={(event) => setInsuranceFilter(event.target.value)}
-            className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1 bg-white dark:bg-slate-900"
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
           >
             {insuranceFilterOptions.map((option) => (
               <option key={option} value={option}>
@@ -786,7 +786,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-slate-500">
+            <thead className="text-left text-slate-500 dark:text-slate-300">
               <tr>
                 <th className="py-3 px-4">Expense</th>
                 <th className="py-3 px-4">CAID</th>
@@ -806,20 +806,20 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
                   onClick={() => setSelectedExpense(expense)}
                 >
                   <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-100">{expense.expId}</td>
-                  <td className="py-3 px-4 text-slate-500">{expense.caid ?? "--"}</td>
-                  <td className="py-3 px-4">{formatDateOnly(expense.activityDate)}</td>
-                  <td className="py-3 px-4">{expense.hospital?.name}</td>
-                  <td className="py-3 px-4">{expense.department?.name}</td>
-                  <td className="py-3 px-4">{expense.patient?.fullName}</td>
-                  <td className="py-3 px-4">{expense.insurance?.type || "Self-Pay"}</td>
-                  <td className="py-3 px-4 text-right font-semibold">
+                  <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{expense.caid ?? "--"}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{formatDateOnly(expense.activityDate)}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.hospital?.name}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.department?.name}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.patient?.fullName}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.insurance?.type || "Self-Pay"}</td>
+                  <td className="py-3 px-4 text-right font-semibold text-slate-800 dark:text-slate-100">
                     {formatCurrency(expense.total, { minimumFractionDigits: 0 })}
                   </td>
                 </tr>
               ))}
               {!filteredExpenses.length && (
                 <tr>
-                  <td className="py-6 text-center text-slate-500" colSpan={8}>
+                  <td className="py-6 text-center text-slate-500 dark:text-slate-400" colSpan={8}>
                     No expenses for the selected filter.
                   </td>
                 </tr>
@@ -827,7 +827,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
           Each row represents one Expense linked 1:1 to a ClinicalActivity (CAID) using the lab schema.
         </p>
       </Card>
@@ -839,7 +839,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
               Select clinical activity (required)
             </label>
             <select
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
               value={formState.caid ? formState.caid.toString() : ""}
               onChange={handleAppointmentSelection}
               required
@@ -852,11 +852,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
               ))}
             </select>
             {formErrors.caid && <p className="text-xs text-red-600">{formErrors.caid}</p>}
-            <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>Refresh to pull the latest Appointments dataset.</span>
               <button
                 type="button"
-                className="text-teal-600 hover:text-teal-700 font-medium"
+                className="text-teal-600 hover:text-teal-700 font-medium dark:text-teal-400 dark:hover:text-teal-300"
                 onClick={() => loadAppointmentOptions({ forceRefresh: true })}
                 disabled={isLoadingAppointments}
               >
@@ -869,11 +869,11 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           {selectedAppointment && (
             <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-3 text-sm">
               <p className="font-semibold text-slate-800 dark:text-slate-100">{selectedAppointment.patient}</p>
-              <p className="text-slate-500">
+              <p className="text-slate-500 dark:text-slate-400">
                 {selectedAppointment.hospital} · {selectedAppointment.department}
               </p>
-              <p className="text-slate-500">Doctor: {selectedAppointment.staff}</p>
-              <p className="text-xs text-slate-500 mt-1">Appointment #{selectedAppointment.id} on {selectedAppointment.date}</p>
+              <p className="text-slate-500 dark:text-slate-400">Doctor: {selectedAppointment.staff}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Appointment #{selectedAppointment.id} on {selectedAppointment.date}</p>
             </div>
           )}
 
@@ -882,7 +882,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             <select
               value={formState.insId}
               onChange={handleFieldChange("insId")}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
             >
               <option value="">Keep CA defaults</option>
               {insurerOptions.map((option) => (
@@ -902,14 +902,14 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
               step="0.01"
               value={formState.total}
               onChange={handleFieldChange("total")}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
               placeholder="0.00"
             />
             {formErrors.total && <p className="text-xs text-red-600 mt-1">{formErrors.total}</p>}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={handleCloseExpenseModal} className="px-4 py-2 text-sm font-medium text-slate-500">
+            <button type="button" onClick={handleCloseExpenseModal} className="px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-300">
               Cancel
             </button>
             <button
@@ -933,48 +933,48 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
         {selectedExpense && (
           <div className="space-y-5 text-sm">
             <div>
-              <p className="text-xs uppercase text-slate-500">Patient</p>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Patient</p>
               <p className="text-base font-semibold text-slate-800 dark:text-slate-100">
                 {selectedExpense.patient?.fullName}
               </p>
-              <p className="text-slate-500">
+              <p className="text-slate-500 dark:text-slate-400">
                 {selectedExpense.hospital?.name} - {selectedExpense.department?.name}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs uppercase text-slate-500">Insurance</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Insurance</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">
                   {selectedExpense.insurance?.type || "Self-Pay"}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-500">Clinical Activity</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Clinical Activity</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">{selectedExpense.caid ?? "--"}</p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-500">Attending Staff</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Attending Staff</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">
                   {selectedExpense.staff?.fullName}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-500">Billed On</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Billed On</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateTime(selectedExpense.activityDate)}</p>
               </div>
             </div>
 
             {selectedExpense.prescription && (
               <div>
-                <p className="text-xs uppercase text-slate-500 mb-2">Prescription #{selectedExpense.prescription.pid}</p>
-                {drawerMedications.length === 0 && <p className="text-slate-500">No medications recorded.</p>}
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400 mb-2">Prescription #{selectedExpense.prescription.pid}</p>
+                {drawerMedications.length === 0 && <p className="text-slate-500 dark:text-slate-400">No medications recorded.</p>}
                 <div className="space-y-3">
                   {drawerMedications.map((med) => (
                     <div key={med.mid} className="flex justify-between text-slate-700 dark:text-slate-200">
                       <div>
                         <p className="font-medium">{med.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {med.dosage || "Dose N/A"} - {med.duration || "Duration N/A"}
                         </p>
                       </div>
@@ -986,7 +986,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             )}
 
             <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-4">
-              <p className="text-xs uppercase text-slate-500">Total</p>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Total</p>
               <p className="text-lg font-bold text-slate-900 dark:text-white">
                 {formatCurrency(selectedExpense.total, { minimumFractionDigits: 0 })}
               </p>

@@ -14,6 +14,7 @@ const INITIAL_FORM_STATE = {
   bloodGroup: "",
   phone: "",
   email: "",
+  city: "",
 };
 
 const PatientsView = ({ data, error, patientConnector }) => {
@@ -116,6 +117,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
     const trimmedName = formValues.fullName.trim();
     const trimmedPhone = formValues.phone.trim();
     const trimmedEmail = formValues.email.trim();
+    const trimmedCity = formValues.city.trim();
     const normalizedCIN = formValues.cin.trim().toUpperCase();
 
     if (!trimmedIID) errors.iid = "IID is required";
@@ -142,12 +144,16 @@ const PatientsView = ({ data, error, patientConnector }) => {
       errors.email = "Invalid email";
     }
 
-    return { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail };
+    if (trimmedCity.length > 80) {
+      errors.city = "City must be 80 characters max";
+    }
+
+    return { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail, trimmedCity };
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail } = validateForm();
+    const { errors, normalizedCIN, trimmedIID, trimmedName, trimmedPhone, trimmedEmail, trimmedCity } = validateForm();
     if (Object.keys(errors).length) {
       setFormErrors(errors);
       return;
@@ -167,6 +173,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
       bloodGroup: formValues.bloodGroup || null,
       phone: trimmedPhone || null,
       email: trimmedEmail || null,
+      city: trimmedCity || null,
     };
 
     setIsSubmitting(true);
@@ -181,7 +188,7 @@ const PatientsView = ({ data, error, patientConnector }) => {
         name: created.name ?? trimmedName,
         sex: created.sex ?? formValues.sex,
         birthDate: created.birthDate || created.birth || formValues.birth || "Not specified",
-        city: created.city || "N/A",
+        city: created.city || trimmedCity || "N/A",
         insurance: created.insurance || "None",
         status: created.status || "Outpatient",
         bloodGroup: created.bloodGroup || requestPayload.bloodGroup,
@@ -206,15 +213,15 @@ const PatientsView = ({ data, error, patientConnector }) => {
     }
   };
 
-  const filtered = useMemo(
-    () =>
-      patients.filter(
-        (p) =>
-          (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (p.cin || "").toLowerCase().includes(searchTerm.toLowerCase())
-      ),
-    [patients, searchTerm]
-  );
+  const filtered = useMemo(() => {
+    const normalizedSearch = searchTerm.toLowerCase();
+    return patients.filter(
+      (p) =>
+        (p.name || "").toLowerCase().includes(normalizedSearch) ||
+        (p.cin || "").toLowerCase().includes(normalizedSearch) ||
+        (p.city || "").toLowerCase().includes(normalizedSearch),
+    );
+  }, [patients, searchTerm]);
 
   const hasConnector = Boolean(patientConnector);
   const lastSyncedLabel = useMemo(() => (syncedAt ? new Date(syncedAt).toLocaleString() : null), [syncedAt]);
@@ -525,6 +532,21 @@ const PatientsView = ({ data, error, patientConnector }) => {
               />
               {formErrors.phone && <p className="text-xs text-red-500 mt-1">{formErrors.phone}</p>}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
+            <input
+              type="text"
+              value={formValues.city}
+              onChange={handleInputChange("city")}
+              placeholder="Primary city"
+              maxLength={80}
+              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                formErrors.city ? "border-red-500" : ""
+              }`}
+            />
+            {formErrors.city && <p className="text-xs text-red-500 mt-1">{formErrors.city}</p>}
           </div>
 
           <div>
