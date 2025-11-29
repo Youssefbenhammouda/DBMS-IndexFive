@@ -14,58 +14,56 @@ import {
 } from "recharts";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
-
-const FALLBACK_LOW_STOCK = [
-  { id: "MED-101", name: "Amoxicillin 500mg", hospital: "Rabat Central", qty: 42, reorderLevel: 100, unit: "boxes", class: "Antibiotic" },
-  { id: "MED-088", name: "Insulin Regular", hospital: "Casablanca General", qty: 20, reorderLevel: 80, unit: "vials", class: "Endocrine" },
-  { id: "MED-215", name: "Aspirin 81mg", hospital: "Tangier Med", qty: 65, reorderLevel: 120, unit: "packs", class: "Analgesic" },
-  { id: "MED-330", name: "Atorvastatin 20mg", hospital: "Fes Regional", qty: 18, reorderLevel: 60, unit: "packs", class: "Cardio" },
-];
-
-const FALLBACK_PRICING_SUMMARY = [
-  { hospital: "Rabat Central", medication: "Amoxicillin 500mg", avg: 34.5, min: 31.0, max: 37.8, updatedAt: "2025-11-26T10:30:00Z" },
-  { hospital: "Casablanca General", medication: "Insulin Regular", avg: 128.0, min: 120.0, max: 134.0, updatedAt: "2025-11-25T09:10:00Z" },
-  { hospital: "Tangier Med", medication: "Aspirin 81mg", avg: 9.5, min: 8.9, max: 10.1, updatedAt: "2025-11-27T14:45:00Z" },
-  { hospital: "Fes Regional", medication: "Atorvastatin 20mg", avg: 52.0, min: 50.0, max: 56.0, updatedAt: "2025-11-24T16:20:00Z" },
-];
-
-const FALLBACK_PRICE_SERIES = [
-  { hospital: "Rabat Central", avgUnitPrice: 34.5 },
-  { hospital: "Casablanca General", avgUnitPrice: 128.0 },
-  { hospital: "Tangier Med", avgUnitPrice: 9.5 },
-  { hospital: "Fes Regional", avgUnitPrice: 52.0 },
-  { hospital: "Marrakech Health", avgUnitPrice: 62.0 },
-];
-
-const FALLBACK_REPLENISHMENT_TREND = [
-  { month: "Jun", qty: 540, cost: 12200 },
-  { month: "Jul", qty: 610, cost: 13100 },
-  { month: "Aug", qty: 500, cost: 11800 },
-  { month: "Sep", qty: 650, cost: 13750 },
-  { month: "Oct", qty: 700, cost: 14200 },
-  { month: "Nov", qty: 720, cost: 14600 },
-];
 const formatCurrency = (value) => `${(value || 0).toLocaleString()} MAD`;
 
 const MedicationsView = ({ data, error, medicationsConnector }) => {
   const [banner, setBanner] = useState(null);
 
+  const setErrorBanner = (message, source) => {
+    setBanner({ type: "error", message, id: Date.now(), source });
+  };
+
   useEffect(() => {
     if (error) {
-      setBanner({ type: "error", message: error, id: Date.now() });
+      setErrorBanner(error, "prop");
+    } else if (banner?.source === "prop") {
+      setBanner(null);
     }
   }, [error]);
 
   useEffect(() => {
     if (!medicationsConnector) {
-      setBanner({ type: "error", message: "Medications connector unavailable. Please refresh.", id: Date.now() });
+      setErrorBanner("Medications connector unavailable. Please refresh.", "connector");
+    } else if (banner?.source === "connector") {
+      setBanner(null);
     }
-  }, [medicationsConnector]);
+  }, [medicationsConnector, banner]);
 
-  const lowStockSource = data?.lowStock?.length ? data.lowStock : FALLBACK_LOW_STOCK;
-  const pricingSummary = data?.pricingSummary?.length ? data.pricingSummary : FALLBACK_PRICING_SUMMARY;
-  const priceSeries = data?.priceSeries?.length ? data.priceSeries : FALLBACK_PRICE_SERIES;
-  const replenishmentTrend = data?.replenishmentTrend?.length ? data.replenishmentTrend : FALLBACK_REPLENISHMENT_TREND;
+  useEffect(() => {
+    if (error || !medicationsConnector) return;
+    if (!data) {
+      setErrorBanner("Medications data unavailable from backend.", "data");
+      return;
+    }
+
+    const issues = [];
+    if (!Array.isArray(data.lowStock)) issues.push("lowStock");
+    if (!Array.isArray(data.pricingSummary)) issues.push("pricingSummary");
+    if (!Array.isArray(data.priceSeries)) issues.push("priceSeries");
+    if (!Array.isArray(data.replenishmentTrend)) issues.push("replenishmentTrend");
+    if (!data.aggregates) issues.push("aggregates");
+
+    if (issues.length) {
+      setErrorBanner(`Medications payload missing fields: ${issues.join(", ")}.`, "data");
+    } else if (banner?.source === "data") {
+      setBanner(null);
+    }
+  }, [data, error, medicationsConnector, banner]);
+
+  const lowStockSource = Array.isArray(data?.lowStock) ? data.lowStock : [];
+  const pricingSummary = Array.isArray(data?.pricingSummary) ? data.pricingSummary : [];
+  const priceSeries = Array.isArray(data?.priceSeries) ? data.priceSeries : [];
+  const replenishmentTrend = Array.isArray(data?.replenishmentTrend) ? data.replenishmentTrend : [];
 
   const lowStockAlerts = useMemo(() => {
     return lowStockSource.map((row, index) => {

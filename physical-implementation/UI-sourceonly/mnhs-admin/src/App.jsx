@@ -27,7 +27,6 @@ import MedicationsConnector from "./services/medicationsConnector";
 import BillingConnector from "./services/billingConnector";
 import { registerPatientMockServer } from "./data/patientMockServer";
 import { registerAppointmentMockServer } from "./data/appointmentMockServer";
-import { registerMedicationsMockServer } from "./data/medicationsMockServer";
 import { ModelConnector } from "./models/modelConnector";
 import { registerCoreModels } from "./models/pageModelRegistry";
 
@@ -55,7 +54,6 @@ export default function MNHSAdmin() {
       registerPatientMockServer(connector);
     }
     registerAppointmentMockServer(connector);
-    registerMedicationsMockServer(connector);
     return connector;
   }, [apiBaseUrl, shouldUsePatientMocks]);
 
@@ -277,7 +275,7 @@ export default function MNHSAdmin() {
 
         <div className="absolute bottom-0 w-full p-4 border-t border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden">
+            <div className="w-15 h-15 rounded-full overflow-hidden">
               <img src="/mnhs_logo.png" alt="MNHS Logo" className="w-full h-full object-contain" />
             </div>
             <div>

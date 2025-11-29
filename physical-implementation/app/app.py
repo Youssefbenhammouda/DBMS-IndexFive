@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 import os
-from pydantic import BaseModel,Field
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,10 +8,13 @@ from fastapi import FastAPI, Depends
 from src.db import create_pool, aiomysql
 from src.pages.medications import (
     MedicationIn,
+    MedicationsAPIError,
+    MedicationsQueryParams,
+    MedicationsResponse,
     StockEntryIn,
     create_medication,
-    insert_stock_entry,
     get_low_stock,
+    insert_stock_entry,
 )
 from src.mnhs import *
 from src.models import *
@@ -142,32 +145,23 @@ async def post_billing_expense(
             status_code=500,
             content={"message": str(exc), "code": "BILLING_500"},
         )
-# GET /api/medications
-@app.get("/api/medications")
+
+
+@app.get("/api/medications", response_model=MedicationsResponse)
 async def get_medications(
-    pageKey: str | None = None,
-    hospital: str | None = None,
-    class_: str | None = None,
-    onlyLowStock: bool = False,
+    query: MedicationsQueryParams = Depends(),
+    conn: aiomysql.Connection = Depends(get_conn),
 ):
     try:
-        return {
-            "lowStock": [],
-            "pricingSummary": [],
-            "priceSeries": [],
-            "replenishmentTrend": [],
-            "aggregates": {
-                "criticalAlerts": 0,
-                "avgStockGapPct": 0.0,
-                "projectedMonthlySpend": 0.0,
-            },
-            "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
-        }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"message": str(e)})
+        return await get_low_stock(conn, query)
+    except MedicationsAPIError as exc:
+        return JSONResponse(
+            status_code=exc.status_code, content={"message": exc.message}
+        )
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"message": str(exc)})
 
 
-# POST /api/medications
 @app.post("/api/medications", status_code=201)
 async def post_medication(
     body: MedicationIn,
@@ -179,12 +173,16 @@ async def post_medication(
             "medication": med,
             "message": "Medication created",
         }
-    except Exception as e:
+    except MedicationsAPIError as exc:
         await conn.rollback()
-        return JSONResponse(status_code=500, content={"message": str(e)})
+        return JSONResponse(
+            status_code=exc.status_code, content={"message": exc.message}
+        )
+    except Exception as exc:
+        await conn.rollback()
+        return JSONResponse(status_code=500, content={"message": str(exc)})
 
 
-# POST /api/medications/stock
 @app.post("/api/medications/stock", status_code=201)
 async def post_medication_stock(
     body: StockEntryIn,
@@ -207,6 +205,14 @@ async def post_medication_stock(
             "stockEntry": stock,
             "message": "Stock entry recorded",
         }
-    except Exception as e:
+    except MedicationsAPIError as exc:
         await conn.rollback()
-        return JSONResponse(status_code=500, content={"message": str(e)})
+        return JSONResponse(
+            status_code=exc.status_code, content={"message": exc.message}
+        )
+    except Exception as exc:
+        await conn.rollback()
+        return JSONResponse(status_code=500, content={"message": str(exc)})
+
+
+app.mount("/", StaticFiles(directory="dist", html=True), name="static")
