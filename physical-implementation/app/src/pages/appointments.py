@@ -1,7 +1,6 @@
 import aiomysql
 from typing import AsyncIterator, List, Dict, Any, Optional, Literal
 from pydantic import BaseModel
-from datetime import date, time
 from datetime import datetime, date, time
 
 
@@ -120,10 +119,10 @@ async def schedule_appointment(
         # Insert into ClinicalActivity
         await cur.execute(
             """
-            INSERT INTO ClinicalActivity (IID, STAFF_ID, DEP_ID, Date, Time)
+            INSERT INTO ClinicalActivity (Time, Date, IID, DEP_ID, STAFF_ID)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (idd, staff_id, dep_id, date_, time_),
+            (time_, date_, idd, dep_id, staff_id),
         )
 
         caid = cur.lastrowid
@@ -131,10 +130,10 @@ async def schedule_appointment(
         # Insert into Appointment
         await cur.execute(
             """
-            INSERT INTO Appointment (CAID, Reason, Status)
+            INSERT INTO Appointment (CAID, Status, Reason)
             VALUES (%s, %s, %s)
             """,
-            (caid, reason, status),
+            (caid, status, reason),
         )
 
         # Commit changes
