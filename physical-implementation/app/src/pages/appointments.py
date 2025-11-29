@@ -28,7 +28,7 @@ async def get_all_appointments(
                 h.Name AS hospital,
                 d.Name AS department,
                 p.FullName AS patient,
-                s.Name AS staff,
+                s.STAFF_ID AS staff,
                 ap.Reason AS reason,
                 ap.Status AS status
             FROM Appointment ap
@@ -119,7 +119,7 @@ async def schedule_appointment(
             iid = patient_row[0]
 
             # Resolve staff id
-            await cur.execute("SELECT STAFF_ID FROM Staff WHERE Name=%s", (staff_name,))
+            await cur.execute("SELECT STAFF_ID FROM Staff WHERE STAFF_ID=%s", (staff_name,))
             staff_row = await cur.fetchone()
             if not staff_row:
                 raise ValueError(f"Staff '{staff_name}' not found")
