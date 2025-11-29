@@ -1,15 +1,90 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Calendar, Filter, Plus, Check, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Calendar, Filter, Plus, Check, X, RefreshCw } from "lucide-react";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
 import Modal from "../components/common/Modal";
 
 const DEFAULT_HOSPITAL_OPTIONS = ["Rabat Central", "Casablanca General", "Marrakech Health", "Tangier Med"];
 
-const AppointmentsView = ({ data, error, appointmentConnector }) => {
+const formatAgendaTime = (time = "") => {
+  if (!time && time !== 0) return "—";
+  const normalized = typeof time === "string" ? time : String(time ?? "");
+  const [hours = "00", minutes = "00"] = normalized.split(":");
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+
+const getTimeSortValue = (time = "") => {
+  const normalized = typeof time === "string" ? time : String(time ?? "");
+  const [hours = "0", minutes = "0"] = normalized.split(":");
+  const h = Number.parseInt(hours, 10);
+  const m = Number.parseInt(minutes, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return Number.POSITIVE_INFINITY;
+  return h * 60 + m;
+};
+
+const buildAgendaDays = (appointments) => {
+  if (!Array.isArray(appointments) || !appointments.length) return [];
+
+  const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+  const dateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+
+  const grouped = appointments.reduce((acc, appointment) => {
+    if (!appointment?.date) return acc;
+    const timestamp = Date.parse(appointment.date);
+    if (Number.isNaN(timestamp)) return acc;
+
+    const key = appointment.date;
+    if (!acc.has(key)) {
+      const dateObj = new Date(timestamp);
+      acc.set(key, {
+        dateKey: key,
+        dateObj,
+        label: `${dayFormatter.format(dateObj)} • ${dateFormatter.format(dateObj)}`,
+        appointments: [],
+      });
+    }
+
+    acc.get(key).appointments.push(appointment);
+    return acc;
+  }, new Map());
+
+  return Array.from(grouped.values())
+    .sort((a, b) => a.dateObj - b.dateObj)
+    .map((group) => ({
+      ...group,
+      appointments: group.appointments
+        .slice()
+        .sort((a, b) => getTimeSortValue(a.time) - getTimeSortValue(b.time)),
+    }))
+    .slice(0, 5);
+};
+
+const getStatusBadgeColor = (status) => {
+  switch (status) {
+    case "Completed":
+      return "green";
+    case "Cancelled":
+    case "No Show":
+      return "red";
+    case "Scheduled":
+    default:
+      return "blue";
+  }
+};
+
+const AppointmentsView = ({ data, error, appointmentConnector, patientConnector }) => {
   const [viewMode, setViewMode] = useState("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [banner, setBanner] = useState(null);
+  const [patientQuery, setPatientQuery] = useState("");
+  const [patientResults, setPatientResults] = useState([]);
+  const [isFetchingPatients, setIsFetchingPatients] = useState(false);
+  const [patientFetchError, setPatientFetchError] = useState(null);
+  const [patientFieldError, setPatientFieldError] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
+  const [hasLoadedPatients, setHasLoadedPatients] = useState(false);
+  const patientSearchRef = useRef(null);
 
   useEffect(() => {
     if (error) {
@@ -35,6 +110,102 @@ const AppointmentsView = ({ data, error, appointmentConnector }) => {
       : [];
     return fromData.length ? fromData : DEFAULT_HOSPITAL_OPTIONS;
   }, [appointments]);
+
+  const agendaDays = useMemo(() => buildAgendaDays(appointments), [appointments]);
+
+  const fetchPatients = useCallback(
+    async ({ forceRefresh = false } = {}) => {
+      if (!patientConnector) return;
+      setIsFetchingPatients(true);
+      setPatientFetchError(null);
+      try {
+        const payload = await patientConnector.fetchPatients({ forceRefresh });
+        const list = Array.isArray(payload?.patients) ? payload.patients : [];
+        setPatientResults(list);
+      } catch (loadError) {
+        setPatientFetchError(loadError?.message || "Unable to load patients. Please try again.");
+      } finally {
+        setIsFetchingPatients(false);
+        setHasLoadedPatients(true);
+      }
+    },
+    [patientConnector],
+  );
+
+  useEffect(() => {
+    if (!isModalOpen || !patientConnector || hasLoadedPatients) return;
+    fetchPatients();
+  }, [isModalOpen, patientConnector, hasLoadedPatients, fetchPatients]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      setPatientQuery("");
+      setSelectedPatient(null);
+      setPatientFieldError(null);
+      setIsPatientDropdownOpen(false);
+    }
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (!isPatientDropdownOpen) return;
+    const handleClickOutside = (event) => {
+      if (patientSearchRef.current && !patientSearchRef.current.contains(event.target)) {
+        setIsPatientDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isPatientDropdownOpen, patientSearchRef]);
+
+  const handlePatientSearchChange = (event) => {
+    setPatientQuery(event.target.value);
+    setSelectedPatient(null);
+    setPatientFieldError(null);
+    setIsPatientDropdownOpen(true);
+  };
+
+  const handlePatientSelect = (patient) => {
+    setSelectedPatient(patient);
+    setPatientQuery(patient?.cin ?? "");
+    setPatientFieldError(null);
+    setIsPatientDropdownOpen(false);
+  };
+
+  const filteredPatients = useMemo(() => {
+    if (!patientResults.length) return [];
+    const term = patientQuery.trim().toLowerCase();
+    const source = term
+      ? patientResults.filter((record) => {
+          const cin = record.cin ? record.cin.toLowerCase() : "";
+          const name = record.name ? record.name.toLowerCase() : "";
+          return cin.includes(term) || name.includes(term);
+        })
+      : patientResults;
+    return source.slice(0, 8);
+  }, [patientQuery, patientResults]);
+
+  const handleScheduleSubmit = (event) => {
+    event.preventDefault();
+    if (!selectedPatient) {
+      setPatientFieldError(
+        patientConnector
+          ? "Select a patient by CIN before scheduling."
+          : "Patient search requires a backend connection.",
+      );
+      if (patientConnector) {
+        setIsPatientDropdownOpen(true);
+      }
+      return;
+    }
+    setPatientFieldError(null);
+    setIsModalOpen(false);
+    setBanner({
+      type: "success",
+      message: `Appointment scheduled for ${selectedPatient.name} (${selectedPatient.cin}) (mock submission).`,
+      id: Date.now(),
+    });
+    // alert(`Appointment scheduled for ${selectedPatient.name} (${selectedPatient.cin}) (mock).`);
+  };
 
   return (
     <div className="space-y-6">
@@ -158,50 +329,48 @@ const AppointmentsView = ({ data, error, appointmentConnector }) => {
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{apt.staff}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{apt.reason}</td>
                   <td className="px-6 py-4">
-                    <Badge
-                      color={apt.status === "Scheduled" ? "blue" : apt.status === "Completed" ? "green" : "red"}
-                    >
-                      {apt.status}
-                    </Badge>
+                    <Badge color={getStatusBadgeColor(apt.status)}>{apt.status}</Badge>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </Card>
-      ) : (
+      ) : agendaDays.length ? (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => (
-            <div key={day} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 min-h-[400px]">
-              <h4 className="font-bold text-center mb-4 text-slate-600 dark:text-slate-300">{day}</h4>
+          {agendaDays.map((day) => (
+            <div key={day.dateKey} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 min-h-[400px]">
+              <h4 className="font-bold text-center mb-4 text-slate-600 dark:text-slate-300">{day.label}</h4>
               <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
+                {day.appointments.map((apt) => (
                   <div
-                    key={i}
+                    key={apt.id || `${day.dateKey}-${apt.time}-${apt.patient}`}
                     className="bg-white dark:bg-slate-700 p-3 rounded-lg shadow-sm border-l-4 border-teal-500 text-xs"
                   >
                     <div className="flex justify-between font-bold text-slate-700 dark:text-slate-200 mb-1">
-                      <span>09:00</span>
-                      <span className="text-teal-600">Cardio</span>
+                      <span>{formatAgendaTime(apt.time)}</span>
+                      <span className="text-teal-600">{apt.department}</span>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400">Mohammed Benali</p>
+                    <p className="text-slate-500 dark:text-slate-400">{apt.patient}</p>
+                    <p className="text-[11px] text-slate-400">with {apt.staff}</p>
+                    <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="truncate pr-2">{apt.hospital}</span>
+                      <Badge color={getStatusBadgeColor(apt.status)}>{apt.status}</Badge>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           ))}
         </div>
+      ) : (
+        <Card className="p-6 text-center text-slate-500 dark:text-slate-400">
+          No appointment data available for agenda view.
+        </Card>
       )}
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Schedule New Appointment">
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setIsModalOpen(false);
-            alert("Appointment Scheduled (Mock)");
-          }}
-        >
+        <form className="space-y-4" onSubmit={handleScheduleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label>
@@ -221,12 +390,67 @@ const AppointmentsView = ({ data, error, appointmentConnector }) => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Patient CIN</label>
-            <input
-              type="text"
-              placeholder="Search CIN..."
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600"
-            />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Patient (CIN) *</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1" ref={patientSearchRef}>
+                <input
+                  type="text"
+                  value={patientQuery}
+                  onChange={handlePatientSearchChange}
+                  onFocus={() => patientConnector && setIsPatientDropdownOpen(true)}
+                  placeholder={patientConnector ? "Search CIN or name..." : "Connect backend to search"}
+                  disabled={!patientConnector}
+                  className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600${
+                    patientFieldError ? " border-red-500" : ""
+                  }`}
+                />
+                {isPatientDropdownOpen && patientConnector && (
+                  <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-10">
+                    {isFetchingPatients ? (
+                      <div className="px-4 py-3 text-sm text-slate-500">Loading patients...</div>
+                    ) : filteredPatients.length ? (
+                      filteredPatients.map((patient, index) => (
+                        <button
+                          type="button"
+                          key={`patient-option-${patient.cin || patient.iid || index}`}
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            handlePatientSelect(patient);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                        >
+                          <span className="font-semibold text-slate-800 dark:text-slate-100">{patient.cin}</span>
+                          <span className="block text-xs text-slate-500">{patient.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-slate-500">No patients match this search.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchPatients({ forceRefresh: true })}
+                disabled={!patientConnector || isFetchingPatients}
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                title="Refresh patient list"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetchingPatients ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+            {selectedPatient && (
+              <p className="text-xs text-slate-500 mt-1">
+                Selected: {selectedPatient.name} • CIN {selectedPatient.cin}
+              </p>
+            )}
+            {patientFieldError && <p className="text-xs text-red-500 mt-1">{patientFieldError}</p>}
+            {patientFetchError && !isFetchingPatients && (
+              <p className="text-xs text-red-500 mt-1">{patientFetchError}</p>
+            )}
+            {!patientConnector && (
+              <p className="text-xs text-slate-500 mt-1">Backend connector required to search patients.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notes</label>

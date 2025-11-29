@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
-import os
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Query, Request
+from fastapi.exceptions import RequestValidationError
 from src.db import create_pool, aiomysql
 from src.pages.medications import (
     MedicationIn,
@@ -16,11 +16,23 @@ from src.pages.medications import (
     get_low_stock,
     insert_stock_entry,
 )
-from src.mnhs import *
+from src.pages.patients import (
+    PatientCreatePayload,
+    PatientCreateResponse,
+    PatientsAPIError,
+    PatientsQueryParams,
+    PatientsResponse,
+    create_patient,
+    create_staff,
+    get_all_patients,
+    get_all_staff,
+)
+from src.pages.core_dashboard import *
+from src.mnhs import Staff
 from src.models import *
-from typing import AsyncIterator, List
+from typing import AsyncIterator, Optional, Literal
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+from datetime import datetime, date, time, timezone
 from src.pages.appointments import schedule_appointment, get_all_appointments
 
 load_dotenv()
@@ -50,6 +62,15 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    message = "Invalid request payload"
+    if exc.errors():
+        first = exc.errors()[0]
+        message = first.get("msg", message)
+    return JSONResponse(status_code=400, content={"message": message})
+
+
 async def get_conn() -> AsyncIterator[aiomysql.Connection]:
     pool = app.state.db_pool
     async with pool.acquire() as conn:
@@ -63,21 +84,57 @@ async def get_conn() -> AsyncIterator[aiomysql.Connection]:
             raise
 
 
-# GET /api/patients - Simple version
-@app.get("/api/patients")
-async def get_patients(conn: aiomysql.Connection = Depends(get_conn)):
-    patients = await get_all_patients(conn)
-    return {"patients": patients, "lastSyncedAt": datetime.now().isoformat()}
+def _utcnow_iso() -> str:
+    """Return an ISO 8601 UTC timestamp suffixed with Z."""
+
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-@app.post("/api/patients", status_code=201)
-async def post_patient(patient: Patient, conn: aiomysql.Connection = Depends(get_conn)):
+class AppointmentCreate(BaseModel):
+    id: Optional[str] = None
+    date: date
+    time: time
+    hospital: str
+    department: str
+    patient: str
+    staff: str
+    reason: str
+    status: Literal["Scheduled", "Completed", "Cancelled", "No Show"]
+
+
+# GET /api/patients
+@app.get("/api/patients", response_model=PatientsResponse)
+async def get_patients(
+    query: PatientsQueryParams = Depends(),
+    conn: aiomysql.Connection = Depends(get_conn),
+):
     try:
-        created = await create_patient(conn, patient.model_dump())
-        return {"patient": created, "message": "Patient created"}
-    except Exception as e:
+        patients = await get_all_patients(conn, query)
+        return PatientsResponse(patients=patients, lastSyncedAt=_utcnow_iso())
+    except PatientsAPIError as exc:
+        return JSONResponse(
+            status_code=exc.status_code, content={"message": exc.message}
+        )
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"message": str(exc)})
+
+
+@app.post("/api/patients", response_model=PatientCreateResponse, status_code=201)
+async def post_patient(
+    patient: PatientCreatePayload,
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    try:
+        created = await create_patient(conn, patient)
+        return PatientCreateResponse(patient=created)
+    except PatientsAPIError as exc:
         await conn.rollback()
-        return JSONResponse(status_code=500, content={"message": str(e)})
+        return JSONResponse(
+            status_code=exc.status_code, content={"message": exc.message}
+        )
+    except Exception as exc:
+        await conn.rollback()
+        return JSONResponse(status_code=500, content={"message": str(exc)})
 
 
 # GET /api/staff - Simple version
@@ -219,39 +276,47 @@ async def post_medication_stock(
 
 # GET /api/appointments
 @app.get("/api/appointments")
-async def get_appointments(conn: aiomysql.Connection = Depends(get_conn)):
-    data = await get_all_appointments(conn)
-    return data
+async def get_appointments(
+    date_range: Optional[str] = Query(default=None, alias="range"),
+    status: Optional[str] = Query(default=None),
+    hospital: Optional[str] = Query(default=None),
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    try:
+        data = await get_all_appointments(
+            conn, date_range=date_range, status=status, hospital=hospital
+        )
+        return data
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"message": str(exc)})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"message": str(exc)})
 
 
 @app.post("/api/appointments", status_code=201)
 async def post_appointments(
-    request: Request, conn: aiomysql.Connection = Depends(get_conn)
+    body: AppointmentCreate, conn: aiomysql.Connection = Depends(get_conn)
 ):
     try:
-        data = await request.json()
-        
-        # Parse time flexibly
-        try:
-            t = datetime.strptime(data["time"], "%H:%M").time()
-        except ValueError:
-            t = datetime.strptime(data["time"], "%H:%M:%S").time()
-
         result = await schedule_appointment(
             conn=conn,
-            date_=datetime.strptime(data["date"], "%Y-%m-%d").date(),
-            time_=t,
-            hospital_name=data["hospital"],
-            department_name=data["department"],
-            patient_name=data["patient"],
-            staff_name=data["staff"],
-            reason=data["reason"],
-            status=data["status"],
+            date_=body.date,
+            time_=body.time,
+            hospital_name=body.hospital,
+            department_name=body.department,
+            patient_name=body.patient,
+            staff_name=body.staff,
+            reason=body.reason,
+            status=body.status,
+            appointment_id=body.id,
         )
         return result
-    except Exception as e:
+    except ValueError as exc:
         await conn.rollback()
-        return JSONResponse(status_code=500, content={"message": str(e)})
+        return JSONResponse(status_code=400, content={"message": str(exc)})
+    except Exception as exc:
+        await conn.rollback()
+        return JSONResponse(status_code=500, content={"message": str(exc)})
 
 
 #

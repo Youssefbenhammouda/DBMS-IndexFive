@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import Badge from "../components/common/Badge";
 import Card from "../components/common/Card";
@@ -6,6 +6,15 @@ import Modal from "../components/common/Modal";
 
 const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 const APPOINTMENT_STATUS_OPTIONS = ["Scheduled", "Completed", "Cancelled", "No Show"];
+const DEFAULT_HOSPITAL_OPTIONS = ["Rabat Central", "Casablanca General", "Marrakech Health", "Tangier Med"];
+const DEFAULT_DEPARTMENT_OPTIONS = ["Cardiology", "Emergency", "Oncology", "Radiology", "Pediatrics"];
+const normalizeQuery = (value) => (value || "").toString().trim().toLowerCase();
+const filterStringOptions = (options, query) => {
+  if (!Array.isArray(options) || !options.length) return [];
+  const normalized = normalizeQuery(query);
+  const source = normalized ? options.filter((option) => option.toLowerCase().includes(normalized)) : options;
+  return source.slice(0, 8);
+};
 const INITIAL_FORM_STATE = {
   iid: "",
   cin: "",
@@ -28,7 +37,7 @@ const buildDefaultAppointmentForm = (patientName) => ({
   status: "Scheduled",
 });
 
-const PatientsView = ({ data, error, patientConnector, appointmentConnector }) => {
+const PatientsView = ({ data, error, patientConnector, appointmentConnector, staffConnector }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patients, setPatients] = useState(() => data?.patients ?? []);
@@ -46,6 +55,16 @@ const PatientsView = ({ data, error, patientConnector, appointmentConnector }) =
   const [scheduleErrors, setScheduleErrors] = useState({});
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleSubmissionError, setScheduleSubmissionError] = useState(null);
+  const [staffDirectory, setStaffDirectory] = useState([]);
+  const [isLoadingStaffDirectory, setIsLoadingStaffDirectory] = useState(false);
+  const [staffDirectoryError, setStaffDirectoryError] = useState(null);
+  const [hasRequestedStaffDirectory, setHasRequestedStaffDirectory] = useState(false);
+  const [isHospitalDropdownOpen, setIsHospitalDropdownOpen] = useState(false);
+  const [isDepartmentDropdownOpen, setIsDepartmentDropdownOpen] = useState(false);
+  const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
+  const hospitalDropdownRef = useRef(null);
+  const departmentDropdownRef = useRef(null);
+  const staffDropdownRef = useRef(null);
 
   useEffect(() => {
     if (Array.isArray(data?.patients)) {
@@ -99,12 +118,81 @@ const PatientsView = ({ data, error, patientConnector, appointmentConnector }) =
     [patientConnector],
   );
 
+  // staff_requirements.md exposes /api/staff, so reuse that payload for search dropdowns.
+  const loadStaffDirectory = useCallback(
+    async ({ forceRefresh = false } = {}) => {
+      if (!staffConnector) return null;
+      setIsLoadingStaffDirectory(true);
+      setStaffDirectoryError(null);
+      setHasRequestedStaffDirectory(true);
+      try {
+        const payload = await staffConnector.fetchStaff({ forceRefresh });
+        const list = Array.isArray(payload?.staff) ? payload.staff : [];
+        setStaffDirectory(list);
+        return list;
+      } catch (staffError) {
+        const message = staffError?.message || "Unable to load staff directory.";
+        setStaffDirectoryError(message);
+        return null;
+      } finally {
+        setIsLoadingStaffDirectory(false);
+      }
+    },
+    [staffConnector],
+  );
+
   const hasInitialPatients = Array.isArray(data?.patients) && data.patients.length > 0;
 
   useEffect(() => {
     if (!patientConnector) return;
     refreshPatients({ silent: hasInitialPatients });
   }, [patientConnector, refreshPatients, hasInitialPatients]);
+
+  useEffect(() => {
+    if (!isScheduleModalOpen || !staffConnector) return;
+    if (staffDirectory.length || isLoadingStaffDirectory) return;
+    loadStaffDirectory();
+  }, [isScheduleModalOpen, staffConnector, staffDirectory.length, isLoadingStaffDirectory, loadStaffDirectory]);
+
+  useEffect(() => {
+    if (!isHospitalDropdownOpen) return;
+    const handleClick = (event) => {
+      if (hospitalDropdownRef.current && !hospitalDropdownRef.current.contains(event.target)) {
+        setIsHospitalDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isHospitalDropdownOpen]);
+
+  useEffect(() => {
+    if (!isDepartmentDropdownOpen) return;
+    const handleClick = (event) => {
+      if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target)) {
+        setIsDepartmentDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isDepartmentDropdownOpen]);
+
+  useEffect(() => {
+    if (!isStaffDropdownOpen) return;
+    const handleClick = (event) => {
+      if (staffDropdownRef.current && !staffDropdownRef.current.contains(event.target)) {
+        setIsStaffDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isStaffDropdownOpen]);
+
+  useEffect(() => {
+    if (isScheduleModalOpen) return;
+    setIsHospitalDropdownOpen(false);
+    setIsDepartmentDropdownOpen(false);
+    setIsStaffDropdownOpen(false);
+  }, [isScheduleModalOpen]);
 
   const showBanner = (type, message) => {
     setBanner({ type, message, id: Date.now() });
@@ -144,12 +232,65 @@ const PatientsView = ({ data, error, patientConnector, appointmentConnector }) =
     }));
   };
 
-  const handleScheduleInputChange = (field) => (event) => {
-    const value = event.target.value;
+  const updateScheduleFieldValue = (field, value) => {
     setScheduleValues((prev) => ({
       ...prev,
       [field]: value,
     }));
+    if (scheduleErrors[field]) {
+      setScheduleErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleHospitalSelect = (value) => {
+    if (!value) return;
+    updateScheduleFieldValue("hospital", value);
+    setIsHospitalDropdownOpen(false);
+  };
+
+  const handleDepartmentSelect = (value) => {
+    if (!value) return;
+    updateScheduleFieldValue("department", value);
+    setIsDepartmentDropdownOpen(false);
+  };
+
+  const handleStaffSelect = (staff) => {
+    if (!staff) return;
+    let hospitalAssigned = false;
+    let departmentAssigned = false;
+    setScheduleValues((prev) => {
+      const next = { ...prev, staff: staff.name };
+      if (!prev.hospital && staff.hospitals.length) {
+        next.hospital = staff.hospitals[0];
+        hospitalAssigned = true;
+      }
+      if (!prev.department && staff.departments.length) {
+        next.department = staff.departments[0];
+        departmentAssigned = true;
+      }
+      return next;
+    });
+    setScheduleErrors((prev) => {
+      const next = { ...prev };
+      delete next.staff;
+      if (hospitalAssigned) delete next.hospital;
+      if (departmentAssigned) delete next.department;
+      return next;
+    });
+    setIsStaffDropdownOpen(false);
+  };
+
+  const handleRefreshStaffDirectory = () => {
+    loadStaffDirectory({ forceRefresh: true });
+  };
+
+  const handleScheduleInputChange = (field) => (event) => {
+    const value = event.target.value;
+    updateScheduleFieldValue(field, value);
   };
 
   const validateForm = () => {
@@ -357,6 +498,76 @@ const PatientsView = ({ data, error, patientConnector, appointmentConnector }) =
       timeLabel: time,
     };
   }, [selectedPatient]);
+  const availableHospitalOptions = useMemo(() => {
+    const set = new Set();
+    staffDirectory.forEach((staff) => {
+      (Array.isArray(staff.hospitals) ? staff.hospitals : []).forEach((hospital) => {
+        if (hospital) set.add(hospital);
+      });
+    });
+    return set.size ? Array.from(set).sort((a, b) => a.localeCompare(b)) : DEFAULT_HOSPITAL_OPTIONS;
+  }, [staffDirectory]);
+  const availableDepartmentOptions = useMemo(() => {
+    const set = new Set();
+    staffDirectory.forEach((staff) => {
+      (Array.isArray(staff.departments) ? staff.departments : []).forEach((dept) => {
+        if (dept) set.add(dept);
+      });
+    });
+    return set.size ? Array.from(set).sort((a, b) => a.localeCompare(b)) : DEFAULT_DEPARTMENT_OPTIONS;
+  }, [staffDirectory]);
+  const staffLookup = useMemo(
+    () =>
+      staffDirectory.map((staff, index) => ({
+        key: staff.id ?? `staff-${index}`,
+        name: staff.name || `Staff ${index + 1}`,
+        role: staff.role || "Staff",
+        hospitals: Array.isArray(staff.hospitals) ? staff.hospitals.filter(Boolean) : [],
+        departments: Array.isArray(staff.departments) ? staff.departments.filter(Boolean) : [],
+      })),
+    [staffDirectory],
+  );
+  const hospitalMatches = useMemo(
+    () => filterStringOptions(availableHospitalOptions, scheduleValues.hospital),
+    [availableHospitalOptions, scheduleValues.hospital],
+  );
+  const departmentMatches = useMemo(
+    () => filterStringOptions(availableDepartmentOptions, scheduleValues.department),
+    [availableDepartmentOptions, scheduleValues.department],
+  );
+  const staffMatches = useMemo(() => {
+    let list = staffLookup;
+    const normalizedHospitalQuery = normalizeQuery(scheduleValues.hospital);
+    const normalizedDepartmentQuery = normalizeQuery(scheduleValues.department);
+    const hospitalFilter = availableHospitalOptions.find(
+      (option) => normalizeQuery(option) === normalizedHospitalQuery,
+    );
+    const departmentFilter = availableDepartmentOptions.find(
+      (option) => normalizeQuery(option) === normalizedDepartmentQuery,
+    );
+    if (hospitalFilter) {
+      list = list.filter((entry) =>
+        entry.hospitals.some((hospital) => normalizeQuery(hospital) === normalizedHospitalQuery),
+      );
+    }
+    if (departmentFilter) {
+      list = list.filter((entry) =>
+        entry.departments.some((dept) => normalizeQuery(dept) === normalizedDepartmentQuery),
+      );
+    }
+    const normalizedStaff = normalizeQuery(scheduleValues.staff);
+    if (normalizedStaff) {
+      list = list.filter((entry) => entry.name.toLowerCase().includes(normalizedStaff));
+    }
+    return list.slice(0, 8);
+  }, [
+    staffLookup,
+    availableHospitalOptions,
+    availableDepartmentOptions,
+    scheduleValues.hospital,
+    scheduleValues.department,
+    scheduleValues.staff,
+  ]);
 
   return (
     <div className="flex h-[calc(100vh-140px)] gap-6">
@@ -758,44 +969,158 @@ const PatientsView = ({ data, error, patientConnector, appointmentConnector }) =
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Hospital *</label>
-            <input
-              type="text"
-              value={scheduleValues.hospital}
-              onChange={handleScheduleInputChange("hospital")}
-              placeholder="e.g., Rabat Central"
-              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
-                scheduleErrors.hospital ? "border-red-500" : ""
-              }`}
-            />
+            <div className="relative" ref={hospitalDropdownRef}>
+              <input
+                type="text"
+                value={scheduleValues.hospital}
+                onChange={(event) => {
+                  handleScheduleInputChange("hospital")(event);
+                  setIsHospitalDropdownOpen(true);
+                }}
+                onFocus={() => setIsHospitalDropdownOpen(true)}
+                placeholder="Search or select a hospital"
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  scheduleErrors.hospital ? "border-red-500" : ""
+                }`}
+                autoComplete="off"
+              />
+              {isHospitalDropdownOpen && availableHospitalOptions.length > 0 && (
+                <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg z-10">
+                  {hospitalMatches.length ? (
+                    hospitalMatches.map((hospital) => (
+                      <button
+                        type="button"
+                        key={`hospital-${hospital}`}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          handleHospitalSelect(hospital);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        {hospital}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-slate-500">No hospitals found.</div>
+                  )}
+                </div>
+              )}
+            </div>
             {scheduleErrors.hospital && <p className="text-xs text-red-500 mt-1">{scheduleErrors.hospital}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department *</label>
-            <input
-              type="text"
-              value={scheduleValues.department}
-              onChange={handleScheduleInputChange("department")}
-              placeholder="e.g., Cardiology"
-              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
-                scheduleErrors.department ? "border-red-500" : ""
-              }`}
-            />
+            <div className="relative" ref={departmentDropdownRef}>
+              <input
+                type="text"
+                value={scheduleValues.department}
+                onChange={(event) => {
+                  handleScheduleInputChange("department")(event);
+                  setIsDepartmentDropdownOpen(true);
+                }}
+                onFocus={() => setIsDepartmentDropdownOpen(true)}
+                placeholder="Search or select a department"
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  scheduleErrors.department ? "border-red-500" : ""
+                }`}
+                autoComplete="off"
+              />
+              {isDepartmentDropdownOpen && availableDepartmentOptions.length > 0 && (
+                <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg z-10">
+                  {departmentMatches.length ? (
+                    departmentMatches.map((department) => (
+                      <button
+                        type="button"
+                        key={`department-${department}`}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          handleDepartmentSelect(department);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        {department}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-slate-500">No departments found.</div>
+                  )}
+                </div>
+              )}
+            </div>
             {scheduleErrors.department && <p className="text-xs text-red-500 mt-1">{scheduleErrors.department}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned Staff *</label>
-            <input
-              type="text"
-              value={scheduleValues.staff}
-              onChange={handleScheduleInputChange("staff")}
-              placeholder="e.g., Dr. Idrissi"
-              className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
-                scheduleErrors.staff ? "border-red-500" : ""
-              }`}
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Assigned Staff *</label>
+              {staffConnector && (
+                <button
+                  type="button"
+                  onClick={handleRefreshStaffDirectory}
+                  disabled={isLoadingStaffDirectory}
+                  className="text-xs font-medium text-teal-600 hover:text-teal-700 disabled:text-slate-400"
+                >
+                  {isLoadingStaffDirectory ? "Refreshing..." : "Refresh list"}
+                </button>
+              )}
+            </div>
+            <div className="relative" ref={staffDropdownRef}>
+              <input
+                type="text"
+                value={scheduleValues.staff}
+                onChange={(event) => {
+                  handleScheduleInputChange("staff")(event);
+                  setIsStaffDropdownOpen(true);
+                }}
+                onFocus={() => setIsStaffDropdownOpen(true)}
+                placeholder={staffConnector ? "Search by name" : "Enter staff name"}
+                className={`w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 ${
+                  scheduleErrors.staff ? "border-red-500" : ""
+                }`}
+                autoComplete="off"
+              />
+              {isStaffDropdownOpen && (
+                <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg z-10">
+                  {isLoadingStaffDirectory ? (
+                    <div className="px-4 py-3 text-sm text-slate-500">Loading staff directory...</div>
+                  ) : staffMatches.length ? (
+                    staffMatches.map((staff) => (
+                      <button
+                        type="button"
+                        key={staff.key}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          handleStaffSelect(staff);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        <div className="font-semibold text-slate-800 dark:text-slate-100">{staff.name}</div>
+                        <div className="text-xs text-slate-500">
+                          {staff.role}
+                          {staff.hospitals.length ? ` • ${staff.hospitals[0]}` : ""}
+                          {staff.departments.length ? ` • ${staff.departments[0]}` : ""}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-slate-500">
+                      {staffConnector ? "No staff match this search." : "Enter staff manually."}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             {scheduleErrors.staff && <p className="text-xs text-red-500 mt-1">{scheduleErrors.staff}</p>}
+            {staffDirectoryError && (
+              <p className="text-xs text-red-500 mt-1">{staffDirectoryError}</p>
+            )}
+            {staffConnector && hasRequestedStaffDirectory && !isLoadingStaffDirectory && !staffDirectoryError && staffDirectory.length === 0 && (
+              <p className="text-xs text-slate-500 mt-1">No staff data yet—refresh once the backend is ready.</p>
+            )}
+            {!staffConnector && (
+              <p className="text-xs text-slate-500 mt-1">Connect to the staff API to browse available clinicians.</p>
+            )}
           </div>
 
           <div>

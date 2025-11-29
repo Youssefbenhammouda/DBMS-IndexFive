@@ -386,17 +386,54 @@ const APPOINTMENTS_MODEL_CONTRACT = {
   },
 };
 
-const normalizeAppointmentRecord = (appointment, index) => ({
-  id: appointment.id ?? `APT-${5000 + index}`,
-  date: appointment.date ?? new Date().toISOString().split("T")[0],
-  time: appointment.time ?? "09:00",
-  hospital: appointment.hospital ?? "Unknown Hospital",
-  department: appointment.department ?? "General",
-  patient: appointment.patient || appointment.patientName || `Patient ${index}`,
-  staff: appointment.staff || appointment.doctor || `Dr. Staff ${index}`,
-  reason: appointment.reason || "Consultation",
-  status: appointment.status || "Scheduled",
-});
+const resolveAppointmentCaid = (appointment, index) => {
+  const parseNumeric = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number" && !Number.isNaN(value)) return value;
+    const trimmed = String(value).trim();
+    if (!trimmed) return null;
+    const direct = Number(trimmed);
+    if (!Number.isNaN(direct)) return direct;
+    const digitsMatch = trimmed.match(/(\d+)/);
+    return digitsMatch ? Number(digitsMatch[0]) : null;
+  };
+
+  const candidates = [
+    appointment?.caid,
+    appointment?.caId,
+    appointment?.activityId,
+    appointment?.activity?.caid,
+    appointment?.activity?.id,
+    appointment?.activity?.activityId,
+    appointment?.id,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = parseNumeric(candidate);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return 5000 + index;
+};
+
+const normalizeAppointmentRecord = (appointment, index) => {
+  const resolvedCaid = resolveAppointmentCaid(appointment, index);
+
+  return {
+    id: appointment.id ?? `APT-${5000 + index}`,
+    caid: resolvedCaid,
+    date: appointment.date ?? new Date().toISOString().split("T")[0],
+    time: appointment.time ?? "09:00",
+    hospital: appointment.hospital ?? "Unknown Hospital",
+    department: appointment.department ?? "General",
+    patient: appointment.patient || appointment.patientName || `Patient ${index}`,
+    staff: appointment.staff || appointment.doctor || `Dr. Staff ${index}`,
+    reason: appointment.reason || "Consultation",
+    status: appointment.status || "Scheduled",
+  };
+};
 
 const buildAppointmentsModel = (payload = {}) => {
   const appointments = Array.isArray(payload.appointments) ? payload.appointments : [];

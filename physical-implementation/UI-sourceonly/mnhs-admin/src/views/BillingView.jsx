@@ -143,18 +143,32 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
   const lastSyncedLabel = metadata.lastSyncedAt ? new Date(metadata.lastSyncedAt).toLocaleString() : null;
   const rawMetadataFilters = metadata.filters || {};
   const metadataFiltersWithScope = useMemo(() => {
+    if (!rawMetadataFilters || typeof rawMetadataFilters !== "object") {
+      return { insuranceScope: "all" };
+    }
+
     if (rawMetadataFilters.insuranceScope) {
       return rawMetadataFilters;
     }
+
+    const rawInsuranceValue = rawMetadataFilters.insuranceId;
+    if (rawInsuranceValue === COVERAGE_SELF_TOKEN || rawInsuranceValue === "self") {
+      return { ...rawMetadataFilters, insuranceScope: "self", insuranceId: null };
+    }
+
     if (
-      rawMetadataFilters.insuranceId === null &&
-      Object.prototype.hasOwnProperty.call(rawMetadataFilters, "insuranceId")
+      rawInsuranceValue === COVERAGE_ALL_TOKEN ||
+      rawInsuranceValue === undefined ||
+      rawInsuranceValue === null
     ) {
-      return { ...rawMetadataFilters, insuranceScope: "self" };
+      return { ...rawMetadataFilters, insuranceScope: "all", insuranceId: null };
     }
-    if (rawMetadataFilters.insuranceId) {
-      return { ...rawMetadataFilters, insuranceScope: "insurer" };
+
+    const numericInsurance = Number(rawInsuranceValue);
+    if (!Number.isNaN(numericInsurance)) {
+      return { ...rawMetadataFilters, insuranceScope: "insurer", insuranceId: numericInsurance };
     }
+
     return { ...rawMetadataFilters, insuranceScope: "all" };
   }, [rawMetadataFilters]);
   const filtersSummary = summarizeFilters(metadataFiltersWithScope);
@@ -169,7 +183,44 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
       setAppointmentsError(null);
       try {
         const options = await billingConnector.fetchActivityOptions({ forceRefresh });
-        setAppointmentOptions(Array.isArray(options) ? options : []);
+        const normalized = (Array.isArray(options) ? options : [])
+          .map((appointment) => {
+            const primary = [
+              appointment?.caid,
+              appointment?.caId,
+              appointment?.activityId,
+              appointment?.activity?.caid,
+              appointment?.activity?.id,
+              appointment?.activity?.activityId,
+              appointment?.id,
+            ].map((value) => {
+              if (value === null || value === undefined) return null;
+              const numeric = Number(value);
+              return Number.isNaN(numeric) ? null : numeric;
+            });
+
+            const directNumeric = primary.find((value) => typeof value === "number" && value > 0);
+            if (typeof directNumeric === "number") {
+              return { ...appointment, caid: directNumeric };
+            }
+
+            const stringSource = appointment?.id ? String(appointment.id) : "";
+            const digitsMatch = stringSource.match(/(\d+)/);
+            if (digitsMatch) {
+              const numericFromString = Number(digitsMatch[0]);
+              if (!Number.isNaN(numericFromString) && numericFromString > 0) {
+                return { ...appointment, caid: numericFromString };
+              }
+            }
+
+            return null;
+          })
+          .filter(Boolean);
+
+        setAppointmentOptions(normalized);
+        if (!normalized.length) {
+          setAppointmentsError("No clinical activities found. Try refreshing.");
+        }
       } catch (err) {
         setAppointmentsError(err.message || "Failed to load appointment data");
       } finally {
@@ -211,7 +262,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
   const selectedAppointment = useMemo(() => {
     const caidValue = formState.caid?.toString();
     if (!caidValue) return null;
-    return appointmentOptions.find((apt) => apt.id?.toString() === caidValue) || null;
+    return appointmentOptions.find((apt) => apt.caid?.toString() === caidValue) || null;
   }, [appointmentOptions, formState.caid]);
 
   const hospitalFilterOptions = useMemo(() => {
@@ -430,7 +481,8 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
       setFormState(() => ({ ...DEFAULT_EXPENSE_FORM }));
       setExpenseModalOpen(false);
       if (typeof onRequestRefresh === "function") {
-        onRequestRefresh(metadataFiltersWithScope || {});
+        const refreshFilters = buildFilterPayload(normalizedFiltersFromMetadata || DEFAULT_FILTER_FORM);
+        onRequestRefresh(refreshFilters);
       }
     } catch (err) {
       setFormStatus({ type: "error", message: err.message || "Failed to capture expense." });
@@ -464,7 +516,6 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
   };
 
   const handleOpenExpenseModal = () => {
-    if (!hasConnector) return;
     setFormErrors({});
     setFormStatus(null);
     setExpenseModalOpen(true);
@@ -475,7 +526,8 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
           Failed to refresh billing data: {error}
@@ -514,15 +566,19 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           <button
             type="button"
             onClick={handleOpenExpenseModal}
-            disabled={!hasConnector}
             className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               hasConnector
                 ? "bg-teal-600 text-white hover:bg-teal-700"
-                : "bg-slate-200 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400"
+                : "bg-amber-200/60 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
             }`}
           >
             <Plus className="w-4 h-4" /> Capture Expense
           </button>
+          {!hasConnector && (
+            <span className="text-xs text-amber-600 dark:text-amber-300">
+              Backend connector offline. You can review the form but saving is disabled.
+            </span>
+          )}
         </div>
       </div>
 
@@ -832,8 +888,26 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
         </p>
       </Card>
 
+      </div>
+
       <Modal isOpen={isExpenseModalOpen} onClose={handleCloseExpenseModal} title="Capture Expense">
         <form className="space-y-5" onSubmit={handleExpenseSubmit}>
+          {!hasConnector && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              Billing connector is unavailable. The form fields remain visible for review, but saving is currently disabled.
+            </div>
+          )}
+          {formStatus && (
+            <div
+              className={`text-xs px-3 py-2 rounded-lg border ${
+                formStatus.type === "success"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-200"
+                  : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200"
+              }`}
+            >
+              {formStatus.message}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
               Select clinical activity (required)
@@ -845,11 +919,15 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
               required
             >
               <option value="">-- Choose an appointment --</option>
-              {appointmentOptions.map((apt) => (
-                <option key={apt.id} value={apt.id?.toString() ?? ""}>
-                  #{apt.id} · {apt.patient} · {apt.department} · {apt.date}
-                </option>
-              ))}
+              {appointmentOptions.map((apt) => {
+                const optionValue = apt.caid?.toString() ?? "";
+                if (!optionValue) return null;
+                return (
+                  <option key={apt.caid ?? apt.id} value={optionValue}>
+                    CA #{apt.caid} · {apt.patient} · {apt.department} · {apt.date}
+                  </option>
+                );
+              })}
             </select>
             {formErrors.caid && <p className="text-xs text-red-600">{formErrors.caid}</p>}
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -914,12 +992,16 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
             </button>
             <button
               type="submit"
-              disabled={isSubmittingExpense}
+              disabled={isSubmittingExpense || !hasConnector}
               className={`px-4 py-2 rounded-lg text-sm font-semibold text-white ${
-                isSubmittingExpense ? "bg-teal-400" : "bg-teal-600 hover:bg-teal-700"
+                !hasConnector
+                  ? "bg-slate-400 dark:bg-slate-600 cursor-not-allowed"
+                  : isSubmittingExpense
+                  ? "bg-teal-400"
+                  : "bg-teal-600 hover:bg-teal-700"
               }`}
             >
-              {isSubmittingExpense ? "Saving..." : "Save Expense"}
+              {!hasConnector ? "Connector offline" : isSubmittingExpense ? "Saving..." : "Save Expense"}
             </button>
           </div>
         </form>
@@ -994,7 +1076,7 @@ const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
           </div>
         )}
       </Drawer>
-    </div>
+    </>
   );
 };
 

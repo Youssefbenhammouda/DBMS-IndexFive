@@ -1,24 +1,30 @@
 from pydantic import BaseModel
-from .pages.core_dashboard import (
-    get_core_dashboard_stats_mnhs,
-    CoreDashboardResponse,
-    QueryCoreDashboardStats,
-)
+from typing import List, Optional, Literal
+from datetime import date
 
-
-from .pages.patients import (
-    create_patient,
-    get_all_patients,
-    Patient,
-    get_all_staff,
-    create_staff,
-    Staff,
-)
 
 from .db import *
-from typing import Optional, Literal, List, Tuple, Dict, Any
-from datetime import date, time, datetime, timedelta
 from .models import *
+
+
+class Patient(BaseModel):
+    iid: int
+    cin: str
+    name: str
+    birth: Optional[date] = None
+    sex: Literal["M", "F"]
+    blood_group: Optional[Literal["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]] = (
+        None
+    )
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    city: Optional[str] = None
+
+
+class Staff(BaseModel):
+    id: int  # STAFF_ID
+    name: str  # FullName
+    status: Optional[str] = "Active"
 
 
 class MedicationStock(BaseModel):
@@ -39,6 +45,34 @@ class StaffAppointmentShare(BaseModel):
     city: str
     region: str
     percentage: float
+
+
+async def list_patients(conn: aiomysql.Connection) -> List[Patient]:
+    """List the first twenty patients ordered by last name"""
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """
+            SELECT *,
+  SUBSTRING_INDEX(FullName, ' ', -1) AS lastname
+FROM Patient
+ORDER BY lastname
+            LIMIT 20
+            """
+        )
+        result = await cur.fetchall()
+        return [
+            Patient(
+                iid=row["IID"],
+                cin=row["CIN"],
+                name=row["FullName"],
+                birth=row["Birth"],
+                sex=row["Sex"],
+                blood_group=row["BloodGroup"],
+                phone=row["Phone"],
+                email=row["Email"],
+            )
+            for row in result
+        ]
 
 
 async def list_low_stock_medications(

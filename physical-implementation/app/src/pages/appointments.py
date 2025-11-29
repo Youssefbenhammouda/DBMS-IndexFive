@@ -28,7 +28,7 @@ async def get_all_appointments(
                 h.Name AS hospital,
                 d.Name AS department,
                 p.FullName AS patient,
-                s.STAFF_ID AS staff,
+                s.FullName AS staff,
                 ap.Reason AS reason,
                 ap.Status AS status
             FROM Appointment ap
@@ -70,8 +70,16 @@ async def get_all_appointments(
             # row['date'] and row['time'] may be datetime/date/time objects or strings depending on driver
             d = row.get("date")
             t = row.get("time")
-            date_str = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else (d if d is not None else None)
-            time_str = t.strftime("%H:%M") if hasattr(t, "strftime") else (t if t is not None else None)
+            date_str = (
+                d.strftime("%Y-%m-%d")
+                if hasattr(d, "strftime")
+                else (d if d is not None else None)
+            )
+            time_str = (
+                t.strftime("%H:%M")
+                if hasattr(t, "strftime")
+                else (t if t is not None else None)
+            )
 
             appointments.append(
                 {
@@ -87,36 +95,43 @@ async def get_all_appointments(
                 }
             )
 
-    return {"appointments": appointments, "lastSyncedAt": datetime.utcnow().isoformat() + "Z"}
+    return {
+        "appointments": appointments,
+        "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
+    }
 
 
 async def schedule_appointment(
     conn: aiomysql.Connection,
     date_: date,
-    time_: Optional[time],
+    time_: time,
     hospital_name: str,
     department_name: str,
     patient_name: str,
     staff_name: str,
     reason: str,
-    status: Literal["Scheduled", "Completed", "Cancelled"] = "Scheduled",
+    status: Literal["Scheduled", "Completed", "Cancelled", "No Show"] = "Scheduled",
     appointment_id: Optional[str] = None,
 ) -> Dict:
     """
     Insert ClinicalActivity + Appointment and return canonical appointment dict.
     Rolls back on error.
     """
-    if status not in {"Scheduled", "Completed", "Cancelled"}:
+    if status not in ALLOWED_STATUSES:
         raise ValueError("Invalid status value")
 
     try:
         async with conn.cursor() as cur:
             # Resolve patient IID
             if str(patient_name).isdigit():
-                await cur.execute("SELECT IID FROM Patient WHERE IID=%s", (patient_name,))
+                await cur.execute(
+                    "SELECT IID FROM Patient WHERE IID=%s", (patient_name,)
+                )
             else:
-                await cur.execute("SELECT IID FROM Patient WHERE FullName=%s", (patient_name,))
-            
+                await cur.execute(
+                    "SELECT IID FROM Patient WHERE FullName=%s", (patient_name,)
+                )
+
             patient_row = await cur.fetchone()
             if not patient_row:
                 raise ValueError(f"Patient '{patient_name}' not found")
@@ -124,9 +139,13 @@ async def schedule_appointment(
 
             # Resolve staff id
             if str(staff_name).isdigit():
-                await cur.execute("SELECT STAFF_ID FROM Staff WHERE STAFF_ID=%s", (staff_name,))
+                await cur.execute(
+                    "SELECT STAFF_ID FROM Staff WHERE STAFF_ID=%s", (staff_name,)
+                )
             else:
-                await cur.execute("SELECT STAFF_ID FROM Staff WHERE FullName=%s", (staff_name,))
+                await cur.execute(
+                    "SELECT STAFF_ID FROM Staff WHERE FullName=%s", (staff_name,)
+                )
 
             staff_row = await cur.fetchone()
             if not staff_row:
@@ -144,7 +163,9 @@ async def schedule_appointment(
             )
             dep_row = await cur.fetchone()
             if not dep_row:
-                raise ValueError(f"Department '{department_name}' in Hospital '{hospital_name}' not found")
+                raise ValueError(
+                    f"Department '{department_name}' in Hospital '{hospital_name}' not found"
+                )
             dep_id = dep_row[0]
 
             # Insert ClinicalActivity (match your table column order: Time, Date, IID, DEP_ID, STAFF_ID)
@@ -180,7 +201,7 @@ async def schedule_appointment(
         "appointment": {
             "id": f"APT-{caid}",
             "date": date_.strftime("%Y-%m-%d"),
-            "time": time_.strftime("%H:%M") if time_ else None,
+            "time": time_.strftime("%H:%M"),
             "hospital": hospital_name,
             "department": department_name,
             "patient": patient_name,

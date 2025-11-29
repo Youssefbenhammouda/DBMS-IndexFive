@@ -27,6 +27,9 @@ import MedicationsConnector from "./services/medicationsConnector";
 import BillingConnector from "./services/billingConnector";
 import { registerPatientMockServer } from "./data/patientMockServer";
 import { registerAppointmentMockServer } from "./data/appointmentMockServer";
+import { registerStaffMockServer } from "./data/staffMockServer";
+import { registerMedicationsMockServer } from "./data/medicationsMockServer";
+import { registerBillingMockServer } from "./data/billingMockServer";
 import { ModelConnector } from "./models/modelConnector";
 import { registerCoreModels } from "./models/pageModelRegistry";
 
@@ -43,19 +46,22 @@ export default function MNHSAdmin() {
     return (configuredBaseUrl && configuredBaseUrl.trim()) || "http://127.0.0.1:8000/api";
   }, []);
 
-  const shouldUsePatientMocks = useMemo(
+  const shouldUseMockServers = useMemo(
     () => String(import.meta.env?.VITE_USE_PATIENT_MOCKS ?? "").toLowerCase() === "true",
     [],
   );
 
   const backendConnector = useMemo(() => {
     const connector = new BackendConnector({ baseUrl: apiBaseUrl });
-    if (shouldUsePatientMocks) {
+    if (shouldUseMockServers) {
       registerPatientMockServer(connector);
+      registerAppointmentMockServer(connector);
+      registerStaffMockServer(connector);
+      registerMedicationsMockServer(connector);
+      registerBillingMockServer(connector);
     }
-    registerAppointmentMockServer(connector);
     return connector;
-  }, [apiBaseUrl, shouldUsePatientMocks]);
+  }, [apiBaseUrl, shouldUseMockServers]);
 
   const modelConnector = useMemo(() => {
     const connector = new ModelConnector(backendConnector);
@@ -118,6 +124,8 @@ export default function MNHSAdmin() {
     [billingConnector, loadPageData],
   );
 
+  const refreshMedications = useCallback(() => loadPageData("Medications"), [loadPageData]);
+
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
@@ -132,8 +140,10 @@ export default function MNHSAdmin() {
   const renderContent = () => {
     const dataForPage = pageData[activePage];
     const errorForPage = pageErrors[activePage];
+    const isActivePageLoading = loadingPageKey === activePage;
+    const hasData = Boolean(dataForPage);
 
-    if (errorForPage && !dataForPage) {
+    if (errorForPage && !hasData) {
       if (activePage === "Overview") {
         return <OverviewView data={null} error={errorForPage} onNavigate={setActivePage} />;
       }
@@ -144,9 +154,7 @@ export default function MNHSAdmin() {
       );
     }
 
-    const isActivePageLoading = loadingPageKey === activePage;
-
-    if (!dataForPage || isActivePageLoading) {
+    if (!hasData && isActivePageLoading) {
       return <div className="p-10 text-center text-slate-500">Loading {activePage} data...</div>;
     }
 
@@ -160,6 +168,7 @@ export default function MNHSAdmin() {
             error={errorForPage}
             patientConnector={patientConnector}
             appointmentConnector={appointmentConnector}
+            staffConnector={staffConnector}
           />
         );
       case "Appointments":
@@ -168,6 +177,7 @@ export default function MNHSAdmin() {
             data={dataForPage}
             error={errorForPage}
             appointmentConnector={appointmentConnector}
+            patientConnector={patientConnector}
           />
         );
       case "Staff":
@@ -178,6 +188,8 @@ export default function MNHSAdmin() {
             data={dataForPage}
             error={errorForPage}
             medicationsConnector={medicationsConnector}
+            staffConnector={staffConnector}
+            onRequestRefresh={refreshMedications}
           />
         );
       case "Billing":
@@ -306,14 +318,7 @@ export default function MNHSAdmin() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex relative">
-              <input
-                type="text"
-                placeholder="Global Search..."
-                className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-teal-500 outline-none text-slate-800 dark:text-slate-200"
-              />
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
+            
 
             <button
               onClick={() => setDarkMode(!isDarkMode)}
@@ -322,10 +327,7 @@ export default function MNHSAdmin() {
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-800"></span>
-            </button>
+            
           </div>
         </header>
 

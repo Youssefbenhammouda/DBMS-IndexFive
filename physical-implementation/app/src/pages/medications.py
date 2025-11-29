@@ -106,7 +106,6 @@ class MedicationsQueryParams(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
-    page_key: Optional[str] = Field(default=None, alias="pageKey")
     hospital: Optional[str] = None
     therapeutic_class: Optional[str] = Field(default=None, alias="class")
     only_low_stock: bool = Field(default=False, alias="onlyLowStock")
