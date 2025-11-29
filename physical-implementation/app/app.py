@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import os
+from pydantic import BaseModel,Field
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,9 +8,10 @@ from fastapi import FastAPI, Depends
 from src.db import create_pool, aiomysql
 from src.pages.medications import (
     MedicationIn,
-    MedicationOut,
-    list_medications,
+    StockEntryIn,
     create_medication,
+    insert_stock_entry,
+    get_low_stock,
 )
 from src.mnhs import *
 from src.models import *
@@ -140,37 +142,71 @@ async def post_billing_expense(
             status_code=500,
             content={"message": str(exc), "code": "BILLING_500"},
         )
-
-
-@app.get("/api/medications", response_model=list[MedicationOut])
+# GET /api/medications
+@app.get("/api/medications")
 async def get_medications(
-    limit: int = 50,
-    conn: aiomysql.Connection = Depends(get_conn),
-):
-    rows = await list_medications(conn, limit)
-    return rows
-
-
-@app.post("/api/medications", status_code=201)
-async def post_medication(
-    body: MedicationIn, conn: aiomysql.Connection = Depends(get_conn)
-
+    pageKey: str | None = None,
+    hospital: str | None = None,
+    class_: str | None = None,
+    onlyLowStock: bool = False,
 ):
     try:
-        await create_medication(
-            conn,
-            mid=body.mid,
-            name=body.name,
-            form=body.form,
-            strength=body.strength,
-            active_ingredient=body.active_ingredient,
-            therapeutic_class=body.therapeutic_class,
-            manufacturer=body.manufacturer,
-        )
-        return {"message": "Medication was created"}
+        return {
+            "lowStock": [],
+            "pricingSummary": [],
+            "priceSeries": [],
+            "replenishmentTrend": [],
+            "aggregates": {
+                "criticalAlerts": 0,
+                "avgStockGapPct": 0.0,
+                "projectedMonthlySpend": 0.0,
+            },
+            "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+# POST /api/medications
+@app.post("/api/medications", status_code=201)
+async def post_medication(
+    body: MedicationIn,
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    try:
+        med = await create_medication(conn, body)
+        return {
+            "medication": med,
+            "message": "Medication created",
+        }
     except Exception as e:
         await conn.rollback()
-        return JSONResponse(status_code=500,content={"message":str(e)})
+        return JSONResponse(status_code=500, content={"message": str(e)})
 
-app.mount("/", StaticFiles(directory="dist", html=True), name="static")
 
+# POST /api/medications/stock
+@app.post("/api/medications/stock", status_code=201)
+async def post_medication_stock(
+    body: StockEntryIn,
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    if body.qtyReceived <= 0:
+        return JSONResponse(
+            status_code=400,
+            content={"message": "qtyReceived must be > 0"},
+        )
+    if body.unitPrice < 0:
+        return JSONResponse(
+            status_code=400,
+            content={"message": "unitPrice must be >= 0"},
+        )
+
+    try:
+        stock = await insert_stock_entry(conn, body)
+        return {
+            "stockEntry": stock,
+            "message": "Stock entry recorded",
+        }
+    except Exception as e:
+        await conn.rollback()
+        return JSONResponse(status_code=500, content={"message": str(e)})

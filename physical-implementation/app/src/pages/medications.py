@@ -3,76 +3,104 @@ import aiomysql
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
+
 class MedicationIn(BaseModel):
-    mid:int
-    name:str
-    form:Optional[str]=None
-    strength:Optional[str]=None
-    active_ingredient:Optional[str]=Field(default=None,alias="activeIngredient")
-    therapeutic_class:Optional[str]=Field(default=None,alias="therapeuticClass")
-    manufacturer:Optional[str]=None
+    id: str
+    name: str
+    hospital: str
+    qty: int
+    reorderLevel: int
+    unit: str
+    class_: Optional[str] = Field(default=None, alias="class")
 
-class MedicationOut(MedicationIn):
-    model_config=ConfigDict(populate_by_name=True)
 
-async def list_medications(conn,limit=50):
-    """
-    GET
-    """
-    async with conn.cursor(aiomysql.DictCursor) as cur:
-        await cur.execute(
-        """
-        SELECT 
-            MID     AS mid,
-            Name    AS name,
-            Form    AS form,
-            Strength    AS strength,
-            ActiveIngredient    AS active_ingredient,
-            TherapeuticClass    AS therapeutic_class,
-            Manufacturer    AS manufacturer
-        FROM Medication
-        ORDER BY Name
-        LIMIT %s
-        """,
-            (limit,),
-    )
-    rows= await cur.fetchall()
-    return rows
-    
-async def create_medication(
-        conn:aiomysql.Connection,
-        mid:int,
-        name:str,
-        form:Optional[str],
-        strength:Optional[str],
-        active_ingredient:Optional[str],
-        therapeutic_class:Optional[str],
-        manufacturer:Optional[str],
-):
-    """
-    POST
+class StockEntryIn(BaseModel):
+    medicationId: str
+    medicationName: Optional[str] = None
+    hospital: str
+    qtyReceived: int
+    unitPrice: float
+
+
+
+async def create_medication(conn: aiomysql.Connection, med: MedicationIn) -> dict:
+    query = """
+        INSERT INTO medications (id, name, hospital, qty, reorder_level, unit, class)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
     async with conn.cursor() as cur:
-        try:
-            await cur.execute(
-                """
-                INSERT INTO Medication(
-                    MID,Name,Form,Strength,ActiveIngredient,
-                    TherapeuticClass,Manufacturer
-                )
-                VALUES(%s,%s,%s,%s,%s,%s,%s)
-                """,
-                (
-                    mid,
-                    name,
-                    form,
-                    strength,
-                    active_ingredient,
-                    therapeutic_class,
-                    manufacturer,
-                ),
-            )
-            await conn.commit()
-        except Exception:
-            await conn.rollback()
-            raise
+        await cur.execute(
+            query,
+            (
+                med.id,
+                med.name,
+                med.hospital,
+                med.qty,
+                med.reorderLevel,
+                med.unit,
+                med.class_,
+            ),
+        )
+    await conn.commit()
+    return med.model_dump(by_alias=True)
+
+
+async def insert_stock_entry(conn: aiomysql.Connection, s: StockEntryIn) -> dict:
+    query = """
+        INSERT INTO medication_stock (
+            medication_id, medication_name, hospital, qty_received, unit_price, received_at
+        ) VALUES (%s, %s, %s, %s, %s, NOW())
+    """
+    async with conn.cursor() as cur:
+        await cur.execute(
+            query,
+            (
+                s.medicationId,
+                s.medicationName,
+                s.hospital,
+                s.qtyReceived,
+                s.unitPrice,
+            ),
+        )
+    await conn.commit()
+    return s.model_dump()
+
+
+async def get_low_stock(
+    conn: aiomysql.Connection,
+    hospital: Optional[str] = None,
+    class_: Optional[str] = None,
+    only_low_stock: bool = False,
+) -> list[dict]:
+    query = """
+        SELECT id, name, hospital, qty, reorder_level, unit, class
+        FROM medications
+        WHERE 1=1
+    """
+    params: list = []
+
+    if hospital:
+        query += " AND hospital = %s"
+        params.append(hospital)
+    if class_:
+        query += " AND class = %s"
+        params.append(class_)
+    if only_low_stock:
+        query += " AND qty <= reorder_level"
+
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(query, params)
+        rows = await cur.fetchall()
+
+    return [
+        {
+            "id": r["id"],
+            "name": r["name"],
+            "hospital": r["hospital"],
+            "qty": r["qty"],
+            "reorderLevel": r["reorder_level"],
+            "unit": r["unit"],
+            "class": r.get("class"),
+        }
+        for r in rows
+    ]
