@@ -11,7 +11,7 @@ The redesigned Billing view only surfaces insights that can be computed from the
 
 | Dataset / Widget | Tables & Columns | Notes |
 | --- | --- | --- |
-| Activity KPIs | `Expense.Total`, `ClinicalActivity.Date`, `Hospital.Region`, `Insurance.InsID` | Aggregations over the last *N* days (default 30). |
+| Activity KPIs | `Expense.Total`, `ClinicalActivity.Date`, `Hospital.Region`, `Insurance.InsID` | Aggregations over the last *N* days (default 90). |
 | Insurance Coverage Mix | `Expense`, `Insurance` | Treat `InsID IS NULL` as **Self-Pay** bucket. |
 | Hospital Billing Overview | `Hospital`, `ClinicalActivity`, `Expense`, `Insurance` | Group by `Hospital.HID`; show totals, volume, insured share. |
 | Department Leaderboard | `Department`, `ClinicalActivity`, `Expense` | Top departments by billed MAD and visit count. |
@@ -22,7 +22,7 @@ The redesigned Billing view only surfaces insights that can be computed from the
 
 ### 3.1 Activity KPIs
 Four KPI tiles:
-1. **Total Billings (30d)** – `SUM(Expense.Total)` filtered by `ClinicalActivity.Date >= CURRENT_DATE - days_back`.
+1. **Total Billings (90d)** – `SUM(Expense.Total)` filtered by `ClinicalActivity.Date >= CURRENT_DATE - days_back`.
 2. **Insured Coverage** – `SUM(Expense.Total WHERE InsID IS NOT NULL) / SUM(Expense.Total)`.
 3. **Average Expense per Activity** – `SUM(Expense.Total) / COUNT(DISTINCT Expense.ExpID)`.
 4. **Active Hospitals** – `COUNT(DISTINCT Hospital.HID)` present in the filtered result set.
@@ -70,8 +70,8 @@ Shows the top prescribed medications tied to billed clinical activities:
 - **Query Params:**
   - `hospital_id` (optional) – limits results to one hospital.
   - `department_id` (optional) – narrows aggregations to a single department.
-  - `insurance_id` (optional) – filter by insurer or `null` for Self-Pay.
-  - `days_back` (default `30`) – rolling window applied to `ClinicalActivity.Date`.
+  - `insurance_id` (optional) – accepts a positive insurer ID, `self` (forces Self-Pay / `InsID IS NULL`), or `none` (explicitly request all insurers with no filter applied). Omitting the param defaults to `none` (all coverage).
+  - `days_back` (default `90`) – rolling window applied to `ClinicalActivity.Date`.
 - **Response Body:**
 
 ```json
@@ -79,7 +79,7 @@ Shows the top prescribed medications tied to billed clinical activities:
   "kpis": [
     {
       "key": "totalMonthlyBillings",
-      "title": "Total Billings (30d)",
+      "title": "Total Billings (90d)",
       "value": 1280000,
       "unit": "MAD",
       "trend": { "direction": "up", "value": 0.084 },
@@ -128,7 +128,7 @@ Shows the top prescribed medications tied to billed clinical activities:
     { "mid": 120, "name": "Atorvastatin 40mg", "therapeuticClass": "Statin", "prescriptions": 48, "share": 0.16 }
   ],
   "metadata": {
-    "filters": { "hospitalId": null, "departmentId": null, "insuranceId": null, "daysBack": 30 },
+    "filters": { "hospitalId": null, "departmentId": null, "insuranceId": null, "insuranceScope": "all", "daysBack": 90 },
     "lastSyncedAt": "2025-11-27T12:34:56Z"
   }
 }
@@ -139,7 +139,7 @@ Shows the top prescribed medications tied to billed clinical activities:
   - `insuranceSplit.share` and `medicationUtilization.share` are expressed as percentages (0–100) or ratios (0–1); the client decides how to display them but the backend must be consistent.
   - `recentExpenses` must include the relational identifiers so the drawer can deep-link to other admin pages.
   - `prescription` is optional; omit it when no `Prescription` exists for the `CAID`.
-  - `metadata.filters` echoes the resolved filters for audit/debug purposes.
+  - `metadata.filters` echoes the resolved filters for audit/debug purposes and now exposes `insuranceScope` (`all`, `self`, or `insurer`) so the UI can distinguish between a `none` token and an actual Self-Pay filter.
 
 ### 4.3 `POST /api/billing/expense`
 

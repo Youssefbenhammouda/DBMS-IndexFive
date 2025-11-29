@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from .pages.core_dashboard import (
     get_core_dashboard_stats_mnhs,
     CoreDashboardResponse,

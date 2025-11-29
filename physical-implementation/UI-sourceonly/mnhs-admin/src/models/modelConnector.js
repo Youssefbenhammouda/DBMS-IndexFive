@@ -33,7 +33,7 @@ class ModelConnector {
   }
 
   async load(pageKey, params = {}, { forceRefresh = false } = {}) {
-    const requestParams = { ...params, pageKey };
+    const requestParams = { ...params };
     const cacheKey = this.createCacheKey(pageKey, requestParams);
 
     if (!forceRefresh && this.cache.has(cacheKey)) {

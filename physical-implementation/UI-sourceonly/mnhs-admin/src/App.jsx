@@ -27,9 +27,7 @@ import MedicationsConnector from "./services/medicationsConnector";
 import BillingConnector from "./services/billingConnector";
 import { registerPatientMockServer } from "./data/patientMockServer";
 import { registerAppointmentMockServer } from "./data/appointmentMockServer";
-import { registerStaffMockServer } from "./data/staffMockServer";
 import { registerMedicationsMockServer } from "./data/medicationsMockServer";
-import { registerBillingMockServer } from "./data/billingMockServer";
 import { ModelConnector } from "./models/modelConnector";
 import { registerCoreModels } from "./models/pageModelRegistry";
 
@@ -46,15 +44,20 @@ export default function MNHSAdmin() {
     return (configuredBaseUrl && configuredBaseUrl.trim()) || "http://127.0.0.1:8000/api";
   }, []);
 
+  const shouldUsePatientMocks = useMemo(
+    () => String(import.meta.env?.VITE_USE_PATIENT_MOCKS ?? "").toLowerCase() === "true",
+    [],
+  );
+
   const backendConnector = useMemo(() => {
     const connector = new BackendConnector({ baseUrl: apiBaseUrl });
-    registerPatientMockServer(connector);
+    if (shouldUsePatientMocks) {
+      registerPatientMockServer(connector);
+    }
     registerAppointmentMockServer(connector);
-    registerStaffMockServer(connector);
     registerMedicationsMockServer(connector);
-    registerBillingMockServer(connector);
     return connector;
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, shouldUsePatientMocks]);
 
   const modelConnector = useMemo(() => {
     const connector = new ModelConnector(backendConnector);
@@ -88,7 +91,7 @@ export default function MNHSAdmin() {
   );
 
   const loadPageData = useCallback(
-    async (pageKey) => {
+    async (pageKey, params = {}) => {
       setLoadingPageKey(pageKey);
       setPageErrors((prev) => {
         if (!prev[pageKey]) return prev;
@@ -97,7 +100,7 @@ export default function MNHSAdmin() {
         return next;
       });
       try {
-        const payload = await modelConnector.load(pageKey);
+        const payload = await modelConnector.load(pageKey, params);
         setPageData((prev) => ({ ...prev, [pageKey]: payload }));
       } catch (error) {
         console.error(`Failed to load ${pageKey} data`, error);
@@ -107,6 +110,14 @@ export default function MNHSAdmin() {
       }
     },
     [modelConnector],
+  );
+
+  const refreshBilling = useCallback(
+    (filters = {}) => {
+      const params = billingConnector?.buildFilterParams ? billingConnector.buildFilterParams(filters) : filters;
+      return loadPageData("Billing", params);
+    },
+    [billingConnector, loadPageData],
   );
 
   useEffect(() => {
@@ -165,7 +176,14 @@ export default function MNHSAdmin() {
           />
         );
       case "Billing":
-        return <BillingView data={dataForPage} error={errorForPage} billingConnector={billingConnector} />;
+        return (
+          <BillingView
+            data={dataForPage}
+            error={errorForPage}
+            billingConnector={billingConnector}
+            onRequestRefresh={refreshBilling}
+          />
+        );
       default:
         return <div className="p-10 text-center text-slate-500">Module Under Construction</div>;
     }
@@ -187,10 +205,10 @@ export default function MNHSAdmin() {
         } lg:translate-x-0`}
       >
         <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-700">
-          <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center mr-3">
-            <span className="text-white font-bold text-lg">M</span>
+          <div className="w-17 h-17 rounded-lg flex items-center justify-center mr-3">
+            <img src="/mnhs_logo.png" alt="MNHS Logo" className="w-17 h-17 object-contain" />
           </div>
-          <span className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">MNHS Admin</span>
+          <span className="text-xl font-bold text-slate-700 dark:text-white tracking-tight">MNHS Admin</span>
         </div>
 
         <div className="p-4 space-y-1">
@@ -259,7 +277,9 @@ export default function MNHSAdmin() {
 
         <div className="absolute bottom-0 w-full p-4 border-t border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-600" />
+            <div className="w-12 h-12 rounded-full overflow-hidden">
+              <img src="/mnhs_logo.png" alt="MNHS Logo" className="w-full h-full object-contain" />
+            </div>
             <div>
               <p className="text-sm font-medium text-slate-900 dark:text-white">Admin User</p>
               <p className="text-xs text-slate-500">admin@mnhs.gov.ma</p>

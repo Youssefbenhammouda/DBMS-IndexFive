@@ -1,8 +1,87 @@
+const DEFAULT_DAYS_BACK = 90;
+const INSURANCE_SCOPES = {
+  ALL: "all",
+  SELF: "self",
+  INSURER: "insurer",
+};
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const normalizeInsuranceFilter = (value) => {
+  if (value === undefined || value === null || value === "none" || value === "") {
+    return { insuranceScope: INSURANCE_SCOPES.ALL, insuranceId: null };
+  }
+
+  if (value === "self") {
+    return { insuranceScope: INSURANCE_SCOPES.SELF, insuranceId: null };
+  }
+
+  const numeric = Number(value);
+  if (!Number.isNaN(numeric) && numeric > 0) {
+    return { insuranceScope: INSURANCE_SCOPES.INSURER, insuranceId: numeric };
+  }
+
+  return { insuranceScope: INSURANCE_SCOPES.ALL, insuranceId: null };
+};
+
+const parseNumeric = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const normalizeFilters = (params = {}) => {
+  const insuranceRaw = params.insurance_id ?? params.insuranceId;
+  const { insuranceScope, insuranceId } = normalizeInsuranceFilter(insuranceRaw);
+  const daysRaw = Number(params.days_back ?? params.daysBack);
+  const daysBack = Number.isNaN(daysRaw) || daysRaw <= 0 ? DEFAULT_DAYS_BACK : Math.floor(daysRaw);
+
+  return {
+    hospitalId: parseNumeric(params.hospital_id ?? params.hospitalId),
+    departmentId: parseNumeric(params.department_id ?? params.departmentId),
+    insuranceScope,
+    insuranceId,
+    daysBack,
+  };
+};
+
+const shouldKeepByInsurance = (insId, filters) => {
+  if (filters.insuranceScope === INSURANCE_SCOPES.SELF) {
+    return insId === null || insId === undefined;
+  }
+  if (filters.insuranceScope === INSURANCE_SCOPES.INSURER) {
+    return insId === filters.insuranceId;
+  }
+  return true;
+};
+
+const filterCollectionsByInsurance = (payload, filters) => {
+  const nextPayload = { ...payload };
+  nextPayload.insuranceSplit = payload.insuranceSplit.filter((bucket) => shouldKeepByInsurance(bucket.insId, filters));
+  nextPayload.recentExpenses = payload.recentExpenses.filter((expense) =>
+    shouldKeepByInsurance(expense.insurance?.insId ?? null, filters),
+  );
+  return nextPayload;
+};
+
+const filterRecentExpensesByDate = (payload, filters) => {
+  const cutoff = Date.now() - filters.daysBack * MS_PER_DAY;
+  return {
+    ...payload,
+    recentExpenses: payload.recentExpenses.filter((expense) => {
+      if (!expense.activityDate) return true;
+      const timestamp = new Date(expense.activityDate).getTime();
+      if (Number.isNaN(timestamp)) return true;
+      return timestamp >= cutoff;
+    }),
+  };
+};
+
 const initialSnapshot = {
   kpis: [
     {
       key: "totalMonthlyBillings",
-      title: "Total Billings (30d)",
+      title: "Total Billings (90d)",
       value: 1280000,
       unit: "MAD",
       subtext: "417 clinical activities",
@@ -113,7 +192,7 @@ const initialSnapshot = {
     { mid: 512, name: "Omeprazole 20mg", therapeuticClass: "Gastroenterology", prescriptions: 20, share: 0.07 },
   ],
   metadata: {
-    filters: { hospitalId: null, departmentId: null, insuranceId: null, daysBack: 30 },
+    filters: { hospitalId: null, departmentId: null, insuranceId: null, insuranceScope: INSURANCE_SCOPES.ALL, daysBack: DEFAULT_DAYS_BACK },
     lastSyncedAt: new Date().toISOString(),
   },
 };
@@ -125,13 +204,24 @@ const registerBillingMockServer = (backendConnector) => {
 
   backendConnector.registerResource(
     "billing",
-    async () => ({
-      ...snapshot,
-      metadata: {
-        ...snapshot.metadata,
+    async (params = {}) => {
+      const filters = normalizeFilters(params);
+      const clonedSnapshot = JSON.parse(JSON.stringify(snapshot));
+      let payload = filterCollectionsByInsurance(clonedSnapshot, filters);
+      payload = filterRecentExpensesByDate(payload, filters);
+      payload.metadata = {
+        ...payload.metadata,
+        filters: {
+          hospitalId: filters.hospitalId,
+          departmentId: filters.departmentId,
+          insuranceId: filters.insuranceScope === INSURANCE_SCOPES.INSURER ? filters.insuranceId : null,
+          insuranceScope: filters.insuranceScope,
+          daysBack: filters.daysBack,
+        },
         lastSyncedAt: new Date().toISOString(),
-      },
-    }),
+      };
+      return payload;
+    },
     { method: "GET" },
   );
 

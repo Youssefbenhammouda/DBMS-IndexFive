@@ -5,10 +5,15 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Depends
 from src.db import create_pool, aiomysql
-from src.pages.medications import MedicationIn,MedicationOut,list_medications,create_medication
+from src.pages.medications import (
+    MedicationIn,
+    MedicationOut,
+    list_medications,
+    create_medication,
+)
 from src.mnhs import *
 from src.models import *
-from typing import AsyncIterator,List
+from typing import AsyncIterator, List
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
@@ -41,7 +46,14 @@ app.add_middleware(
 async def get_conn() -> AsyncIterator[aiomysql.Connection]:
     pool = app.state.db_pool
     async with pool.acquire() as conn:
-        yield conn
+        try:
+            yield conn
+            if not conn.get_autocommit():
+                await conn.commit()
+        except Exception:
+            if not conn.get_autocommit():
+                await conn.rollback()
+            raise
 
 
 # GET /api/patients - Simple version
@@ -90,19 +102,59 @@ async def get_core_dashboard_stats(
         return JSONResponse(status_code=500, content={"message": str(e)})
 
 
-app.mount("/", StaticFiles(directory="dist", html=True), name="static")
-@app.get("/api/medications",response_model=list[MedicationOut])
-async def get_medications(
-    limit:int=50,
-    conn:aiomysql.Connection=Depends(get_conn),
+@app.get("/api/billing", response_model=BillingResponse)
+async def get_billing(
+    query: BillingQueryParams = Depends(),
+    conn: aiomysql.Connection = Depends(get_conn),
 ):
-    rows=await list_medications(conn,limit)
+    try:
+        return await get_billing_dashboard(conn, query)
+    except BillingAPIError as exc:
+        return JSONResponse(status_code=exc.status_code, content=exc.to_payload())
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content={"message": str(exc), "code": "BILLING_500"},
+        )
+
+
+@app.post(
+    "/api/billing/expense",
+    response_model=CreateExpenseResponse,
+    status_code=201,
+)
+async def post_billing_expense(
+    payload: CreateExpenseRequest,
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    try:
+        expense = await create_billing_expense(conn, payload)
+        await conn.commit()
+        return CreateExpenseResponse(expense=expense, message="Expense captured")
+    except BillingAPIError as exc:
+        await conn.rollback()
+        return JSONResponse(status_code=exc.status_code, content=exc.to_payload())
+    except Exception as exc:
+        await conn.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={"message": str(exc), "code": "BILLING_500"},
+        )
+
+
+@app.get("/api/medications", response_model=list[MedicationOut])
+async def get_medications(
+    limit: int = 50,
+    conn: aiomysql.Connection = Depends(get_conn),
+):
+    rows = await list_medications(conn, limit)
     return rows
 
-@app.post("/api/medications",status_code=201)
+
+@app.post("/api/medications", status_code=201)
 async def post_medication(
-    body:MedicationIn,
-    conn:aiomysql.Connection=Depends(get_conn),
+    body: MedicationIn, conn: aiomysql.Connection = Depends(get_conn)
+
 ):
     try:
         await create_medication(
@@ -115,9 +167,10 @@ async def post_medication(
             therapeutic_class=body.therapeutic_class,
             manufacturer=body.manufacturer,
         )
-        return {"message":"Medication was created"}
+        return {"message": "Medication was created"}
     except Exception as e:
         await conn.rollback()
         return JSONResponse(status_code=500,content={"message":str(e)})
 
-    
+app.mount("/", StaticFiles(directory="dist", html=True), name="static")
+

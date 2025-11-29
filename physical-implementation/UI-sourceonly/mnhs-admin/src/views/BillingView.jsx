@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { CreditCard, ShieldCheck, Clock3, AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CreditCard, ShieldCheck, Clock3, AlertTriangle, Plus } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -12,6 +12,7 @@ import Card from "../components/common/Card";
 import KpiCard from "../components/common/KpiCard";
 import Badge from "../components/common/Badge";
 import Drawer from "../components/common/Drawer";
+import Modal from "../components/common/Modal";
 
 const INSURANCE_COLORS = ["#0d9488", "#3b82f6", "#f97316", "#8b5cf6", "#ef4444"];
 
@@ -22,127 +23,22 @@ const ICON_MAP = {
   AlertTriangle,
 };
 
-const BILLING_VIEW_MOCK = {
-  kpis: [
-    {
-      key: "totalMonthlyBillings",
-      title: "Total Billings (30d)",
-      value: 1280000,
-      unit: "MAD",
-      subtext: "417 clinical activities",
-      trend: { direction: "up", value: 0.084 },
-      iconKey: "CreditCard",
-    },
-    {
-      key: "insuredCoverage",
-      title: "Insured Coverage",
-      value: 0.78,
-      unit: "ratio",
-      subtext: "Weighted by Expense.Total",
-      trend: { direction: "up", value: 0.032 },
-      iconKey: "ShieldCheck",
-    },
-    {
-      key: "avgExpense",
-      title: "Average Expense",
-      value: 3050,
-      unit: "MAD",
-      subtext: "Per billed activity",
-      trend: { direction: "down", value: 0.012 },
-      iconKey: "Clock3",
-    },
-    {
-      key: "activeHospitals",
-      title: "Active Hospitals",
-      value: 9,
-      unit: "count",
-      subtext: "With billable activity",
-      trend: { direction: "up", value: 0.05 },
-      iconKey: "AlertTriangle",
-    },
-  ],
-  insuranceSplit: [
-    { insId: 1, type: "CNOPS", amount: 520000, activities: 138, share: 41 },
-    { insId: 2, type: "CNSS", amount: 410000, activities: 112, share: 32 },
-    { insId: 3, type: "RAMED", amount: 165000, activities: 74, share: 13 },
-    { insId: 4, type: "Private", amount: 135000, activities: 41, share: 11 },
-    { insId: null, type: "Self-Pay", amount: 50000, activities: 32, share: 3 },
-  ],
-  hospitalRollup: [
-    { hid: 1, name: "Casablanca Central", region: "Casablanca-Settat", total: 260000, activities: 84, insuredShare: 0.81, avgExpense: 3095 },
-    { hid: 2, name: "Rabat University Hospital", region: "Rabat-Salé-Kénitra", total: 215000, activities: 72, insuredShare: 0.79, avgExpense: 2986 },
-    { hid: 3, name: "Tangier Regional", region: "Tanger-Tétouan-Al Hoceïma", total: 142000, activities: 46, insuredShare: 0.64, avgExpense: 3087 },
-    { hid: 4, name: "Fez Specialist Center", region: "Fès-Meknès", total: 118000, activities: 39, insuredShare: 0.73, avgExpense: 3025 },
-    { hid: 5, name: "Oujda Teaching Hospital", region: "Oriental", total: 87000, activities: 28, insuredShare: 0.52, avgExpense: 3107 },
-  ],
-  departmentSummary: [
-    { depId: 11, hospital: "Casablanca Central", department: "Cardiology", specialty: "Cardiology", total: 76000, activities: 22, avgExpense: 3450 },
-    { depId: 14, hospital: "Casablanca Central", department: "Oncology", specialty: "Oncology", total: 54000, activities: 14, avgExpense: 3850 },
-    { depId: 21, hospital: "Rabat University Hospital", department: "Neurology", specialty: "Neurology", total: 51000, activities: 17, avgExpense: 3000 },
-    { depId: 27, hospital: "Tangier Regional", department: "Emergency", specialty: "Emergency", total: 42000, activities: 25, avgExpense: 1680 },
-    { depId: 31, hospital: "Fez Specialist Center", department: "Orthopedics", specialty: "Orthopedics", total: 39500, activities: 13, avgExpense: 3038 },
-  ],
-  recentExpenses: [
-    {
-      expId: 1048,
-      caid: 8123,
-      activityDate: "2025-11-12T09:45:00Z",
-      hospital: { hid: 4, name: "Rabat University Hospital" },
-      department: { depId: 21, name: "Cardiology" },
-      patient: { iid: 5401, fullName: "Amina Haddad" },
-      staff: { staffId: 221, fullName: "Dr. Selma Idrissi" },
-      insurance: { insId: 2, type: "CNSS" },
-      total: 2450,
-      prescription: {
-        pid: 9901,
-        medications: [
-          { mid: 120, name: "Atorvastatin 40mg", dosage: "1 tablet", duration: "30 days", therapeuticClass: "Statin" },
-          { mid: 218, name: "Metoprolol 50mg", dosage: "1 tablet", duration: "30 days", therapeuticClass: "Beta blocker" },
-        ],
-      },
-    },
-    {
-      expId: 1047,
-      caid: 8121,
-      activityDate: "2025-11-10T14:30:00Z",
-      hospital: { hid: 1, name: "Casablanca Central" },
-      department: { depId: 14, name: "Oncology" },
-      patient: { iid: 5402, fullName: "Nabil Faridi" },
-      staff: { staffId: 189, fullName: "Dr. Amine Rahmouni" },
-      insurance: { insId: 1, type: "CNOPS" },
-      total: 3120,
-      prescription: {
-        pid: 9900,
-        medications: [
-          { mid: 301, name: "Chemotherapy pack", dosage: "Cycle", duration: "1 session", therapeuticClass: "Chemotherapy" },
-        ],
-      },
-    },
-    {
-      expId: 1046,
-      caid: 8045,
-      activityDate: "2025-11-08T08:05:00Z",
-      hospital: { hid: 3, name: "Tangier Regional" },
-      department: { depId: 27, name: "Emergency" },
-      patient: { iid: 5210, fullName: "Salma Outmane" },
-      staff: { staffId: 205, fullName: "Dr. Fadoua Kabbaj" },
-      insurance: { insId: 4, type: "Private" },
-      total: 5780,
-      prescription: null,
-    },
-  ],
-  medicationUtilization: [
-    { mid: 120, name: "Atorvastatin 40mg", therapeuticClass: "Statin", prescriptions: 48, share: 0.16 },
-    { mid: 218, name: "Metoprolol 50mg", therapeuticClass: "Beta blocker", prescriptions: 42, share: 0.14 },
-    { mid: 301, name: "Chemotherapy pack", therapeuticClass: "Chemotherapy", prescriptions: 28, share: 0.09 },
-    { mid: 402, name: "Insulin Lispro", therapeuticClass: "Endocrinology", prescriptions: 24, share: 0.08 },
-    { mid: 512, name: "Omeprazole 20mg", therapeuticClass: "Gastroenterology", prescriptions: 20, share: 0.07 },
-  ],
-  metadata: {
-    filters: { hospitalId: null, departmentId: null, insuranceId: null, daysBack: 30 },
-    lastSyncedAt: new Date().toISOString(),
-  },
+const DEFAULT_EXPENSE_FORM = {
+  caid: "",
+  insId: "",
+  total: "",
 };
+
+const COVERAGE_ALL_TOKEN = "none";
+const COVERAGE_SELF_TOKEN = "self";
+const DEFAULT_DAYS_BACK = 90;
+const DEFAULT_FILTER_FORM = {
+  hospitalId: "",
+  departmentId: "",
+  insuranceId: COVERAGE_ALL_TOKEN,
+  daysBack: DEFAULT_DAYS_BACK.toString(),
+};
+const DAYS_BACK_PRESETS = [7, 30, 60, 90];
 
 const formatCurrency = (value, { compact = false, minimumFractionDigits = 0, maximumFractionDigits = 0 } = {}) => {
   if (typeof value !== "number" || Number.isNaN(value)) return "--";
@@ -192,11 +88,11 @@ const summarizeFilters = (filters = {}) => {
   const tokens = [];
   if (filters.hospitalId) tokens.push(`Hospital #${filters.hospitalId}`);
   if (filters.departmentId) tokens.push(`Department #${filters.departmentId}`);
-  if (filters.insuranceId === null) tokens.push("Self-Pay only");
-  else if (filters.insuranceId) tokens.push(`Insurer #${filters.insuranceId}`);
-  const scope = tokens.length ? tokens.join(" - ") : "Network-wide";
-  const days = filters.daysBack ?? 30;
-  return `${scope} - Last ${days} days`;
+  if (filters.insuranceScope === "self") tokens.push("Self-Pay only");
+  else if (filters.insuranceScope === "insurer" && filters.insuranceId) tokens.push(`Insurer #${filters.insuranceId}`);
+  const scopeLabel = tokens.length ? tokens.join(" - ") : "Network-wide";
+  const days = filters.daysBack ?? DEFAULT_DAYS_BACK;
+  return `${scopeLabel} - Last ${days} days`;
 };
 
 const formatDateOnly = (value) => {
@@ -217,11 +113,22 @@ const shareFromValue = (value, fallbackAmount = 0, totalAmount = 1) => {
   return (fallbackAmount / totalAmount) * 100;
 };
 
-const BillingView = ({ data, error, billingConnector }) => {
+const BillingView = ({ data, error, billingConnector, onRequestRefresh }) => {
   const [insuranceFilter, setInsuranceFilter] = useState("All");
   const [selectedExpense, setSelectedExpense] = useState(null);
+  const [isExpenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [formState, setFormState] = useState(DEFAULT_EXPENSE_FORM);
+  const [formErrors, setFormErrors] = useState({});
+  const [formStatus, setFormStatus] = useState(null);
+  const [isSubmittingExpense, setSubmittingExpense] = useState(false);
+  const [appointmentOptions, setAppointmentOptions] = useState([]);
+  const [isLoadingAppointments, setLoadingAppointments] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState(null);
+  const [filterForm, setFilterForm] = useState(DEFAULT_FILTER_FORM);
+  const metadataSyncSignature = useRef(null);
 
-  const dataset = data && Object.keys(data).length ? data : BILLING_VIEW_MOCK;
+  const usingLiveData = Boolean(data && Object.keys(data).length);
+  const dataset = usingLiveData ? data : {};
   const {
     kpis = [],
     insuranceSplit = [],
@@ -233,10 +140,195 @@ const BillingView = ({ data, error, billingConnector }) => {
   } = dataset;
 
   const hasConnector = Boolean(billingConnector);
-  const usingLiveData = Boolean(data);
   const lastSyncedLabel = metadata.lastSyncedAt ? new Date(metadata.lastSyncedAt).toLocaleString() : null;
-  const filtersSummary = summarizeFilters(metadata.filters);
+  const rawMetadataFilters = metadata.filters || {};
+  const metadataFiltersWithScope = useMemo(() => {
+    if (rawMetadataFilters.insuranceScope) {
+      return rawMetadataFilters;
+    }
+    if (
+      rawMetadataFilters.insuranceId === null &&
+      Object.prototype.hasOwnProperty.call(rawMetadataFilters, "insuranceId")
+    ) {
+      return { ...rawMetadataFilters, insuranceScope: "self" };
+    }
+    if (rawMetadataFilters.insuranceId) {
+      return { ...rawMetadataFilters, insuranceScope: "insurer" };
+    }
+    return { ...rawMetadataFilters, insuranceScope: "all" };
+  }, [rawMetadataFilters]);
+  const filtersSummary = summarizeFilters(metadataFiltersWithScope);
 
+  const loadAppointmentOptions = useCallback(
+    async ({ forceRefresh = false } = {}) => {
+      if (!billingConnector?.fetchActivityOptions) {
+        setAppointmentsError("Billing connector unavailable");
+        return;
+      }
+      setLoadingAppointments(true);
+      setAppointmentsError(null);
+      try {
+        const options = await billingConnector.fetchActivityOptions({ forceRefresh });
+        setAppointmentOptions(Array.isArray(options) ? options : []);
+      } catch (err) {
+        setAppointmentsError(err.message || "Failed to load appointment data");
+      } finally {
+        setLoadingAppointments(false);
+      }
+    },
+    [billingConnector],
+  );
+
+  useEffect(() => {
+    if (isExpenseModalOpen && !appointmentOptions.length && !isLoadingAppointments) {
+      loadAppointmentOptions();
+    }
+  }, [isExpenseModalOpen, appointmentOptions.length, isLoadingAppointments, loadAppointmentOptions]);
+
+  useEffect(() => {
+    if (!isExpenseModalOpen) {
+      setFormErrors({});
+      setSubmittingExpense(false);
+      setFormState(() => ({ ...DEFAULT_EXPENSE_FORM }));
+    }
+  }, [isExpenseModalOpen]);
+
+  const insurerOptions = useMemo(() => {
+    const uniqueInsurers = new Map();
+    insuranceSplit.forEach((bucket) => {
+      if (bucket.insId === null || bucket.insId === undefined) return;
+      const key = bucket.insId.toString();
+      if (!uniqueInsurers.has(key)) {
+        uniqueInsurers.set(key, {
+          value: key,
+          label: bucket.type || `Insurer #${bucket.insId}`,
+        });
+      }
+    });
+    return [{ value: "self", label: "Self-Pay" }, ...Array.from(uniqueInsurers.values())];
+  }, [insuranceSplit]);
+
+  const selectedAppointment = useMemo(() => {
+    const caidValue = formState.caid?.toString();
+    if (!caidValue) return null;
+    return appointmentOptions.find((apt) => apt.id?.toString() === caidValue) || null;
+  }, [appointmentOptions, formState.caid]);
+
+  const hospitalFilterOptions = useMemo(() => {
+    const unique = new Map();
+    hospitalRollup.forEach((row) => {
+      if (!row || row.hid === undefined || row.hid === null) return;
+      unique.set(row.hid.toString(), row.name || `Hospital #${row.hid}`);
+    });
+    return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
+  }, [hospitalRollup]);
+
+  const departmentFilterOptions = useMemo(() => {
+    const unique = new Map();
+    departmentSummary.forEach((dept) => {
+      if (!dept || dept.depId === undefined || dept.depId === null) return;
+      const value = dept.depId.toString();
+      if (!unique.has(value)) {
+        unique.set(value, `${dept.department || `Department #${dept.depId}`} (${dept.hospital || "Unknown"})`);
+      }
+    });
+    return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
+  }, [departmentSummary]);
+
+  const coverageFilterOptions = useMemo(() => {
+    const rows = [
+      { value: COVERAGE_ALL_TOKEN, label: "All coverages" },
+      { value: COVERAGE_SELF_TOKEN, label: "Self-Pay only" },
+    ];
+    const seen = new Set(rows.map((option) => option.value));
+    insuranceSplit.forEach((bucket) => {
+      if (bucket.insId === null || bucket.insId === undefined) return;
+      const value = bucket.insId.toString();
+      if (seen.has(value)) return;
+      seen.add(value);
+      rows.push({ value, label: bucket.type || `Insurer #${bucket.insId}` });
+    });
+    return rows;
+  }, [insuranceSplit]);
+
+  const daysBackOptions = useMemo(() => {
+    const values = new Set(DAYS_BACK_PRESETS);
+    const metaValue = Number(metadataFiltersWithScope.daysBack);
+    if (!Number.isNaN(metaValue) && metaValue > 0) values.add(metaValue);
+    const currentValue = Number(filterForm.daysBack);
+    if (!Number.isNaN(currentValue) && currentValue > 0) values.add(currentValue);
+    return Array.from(values).sort((a, b) => a - b);
+  }, [filterForm.daysBack, metadataFiltersWithScope]);
+
+  const normalizedFiltersFromMetadata = useMemo(() => {
+    const resolved = {
+      hospitalId: metadataFiltersWithScope.hospitalId ? metadataFiltersWithScope.hospitalId.toString() : "",
+      departmentId: metadataFiltersWithScope.departmentId ? metadataFiltersWithScope.departmentId.toString() : "",
+      insuranceId:
+        metadataFiltersWithScope.insuranceScope === "self"
+          ? COVERAGE_SELF_TOKEN
+          : metadataFiltersWithScope.insuranceScope === "insurer" && metadataFiltersWithScope.insuranceId
+          ? metadataFiltersWithScope.insuranceId.toString()
+          : COVERAGE_ALL_TOKEN,
+      daysBack: (metadataFiltersWithScope.daysBack ?? DEFAULT_DAYS_BACK).toString(),
+    };
+    return resolved;
+  }, [metadataFiltersWithScope]);
+
+  // Keep track of the last metadata snapshot to avoid clobbering in-progress edits.
+  useEffect(() => {
+    const metadataSignature = JSON.stringify(normalizedFiltersFromMetadata);
+    if (metadataSignature === metadataSyncSignature.current) {
+      return;
+    }
+    metadataSyncSignature.current = metadataSignature;
+    setFilterForm(normalizedFiltersFromMetadata);
+  }, [normalizedFiltersFromMetadata]);
+
+  const filtersDirty = useMemo(() => {
+    return JSON.stringify(filterForm) !== JSON.stringify(normalizedFiltersFromMetadata);
+  }, [filterForm, normalizedFiltersFromMetadata]);
+
+  const isDefaultFilterState = useMemo(() => {
+    return JSON.stringify(filterForm) === JSON.stringify(DEFAULT_FILTER_FORM);
+  }, [filterForm]);
+
+  const handleFilterFieldChange = (field) => (event) => {
+    const { value } = event.target;
+    setFilterForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const buildFilterPayload = useCallback((form) => {
+    const payload = {};
+    if (form.hospitalId) payload.hospitalId = Number(form.hospitalId);
+    if (form.departmentId) payload.departmentId = Number(form.departmentId);
+    if (form.insuranceId === COVERAGE_SELF_TOKEN) {
+      payload.insuranceId = COVERAGE_SELF_TOKEN;
+    } else if (form.insuranceId === COVERAGE_ALL_TOKEN) {
+      payload.insuranceId = COVERAGE_ALL_TOKEN;
+    } else if (form.insuranceId) {
+      const numeric = Number(form.insuranceId);
+      if (!Number.isNaN(numeric)) {
+        payload.insuranceId = numeric;
+      }
+    }
+    if (form.daysBack) {
+      const days = Number(form.daysBack);
+      if (!Number.isNaN(days) && days > 0) payload.daysBack = days;
+    }
+    return payload;
+  }, []);
+
+  const handleApplyFilters = () => {
+    if (!hasConnector || typeof onRequestRefresh !== "function") return;
+    onRequestRefresh(buildFilterPayload(filterForm));
+  };
+
+  const handleClearFilters = () => {
+    setFilterForm({ ...DEFAULT_FILTER_FORM });
+  };
+
+  const canApplyFilters = filtersDirty && hasConnector && typeof onRequestRefresh === "function";
   const preparedKpis = useMemo(
     () =>
       kpis.map((kpi, index) => ({
@@ -251,7 +343,7 @@ const BillingView = ({ data, error, billingConnector }) => {
     [kpis],
   );
 
-  const insuranceOptions = useMemo(
+  const insuranceFilterOptions = useMemo(
     () => ["All", ...insuranceSplit.map((bucket) => bucket.type)],
     [insuranceSplit],
   );
@@ -292,24 +384,233 @@ const BillingView = ({ data, error, billingConnector }) => {
 
   const drawerMedications = selectedExpense?.prescription?.medications || [];
 
+  const handleExpenseSubmit = async (event) => {
+    event.preventDefault();
+    if (!hasConnector) {
+      setFormStatus({ type: "error", message: "Billing connector unavailable." });
+      return;
+    }
+
+    const resolvedCaid = Number(formState.caid);
+    const resolvedTotal = Number(formState.total);
+    const nextErrors = {};
+
+    if (!formState.caid || Number.isNaN(resolvedCaid) || resolvedCaid <= 0) {
+      nextErrors.caid = "Select a clinical activity.";
+    }
+    if (Number.isNaN(resolvedTotal) || resolvedTotal < 0) {
+      nextErrors.total = "Total must be zero or greater.";
+    }
+
+    let resolvedInsId;
+    if (formState.insId === "self") {
+      resolvedInsId = null;
+    } else if (formState.insId) {
+      resolvedInsId = Number(formState.insId);
+      if (Number.isNaN(resolvedInsId)) {
+        nextErrors.insId = "Insurance must be numeric.";
+      }
+    }
+
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length) {
+      return;
+    }
+
+    const payload = { caid: resolvedCaid, total: resolvedTotal };
+    if (resolvedInsId !== undefined) {
+      payload.insId = resolvedInsId;
+    }
+
+    setSubmittingExpense(true);
+    setFormStatus(null);
+    try {
+      await billingConnector.createExpense(payload);
+      setFormStatus({ type: "success", message: "Expense captured." });
+      setFormState(() => ({ ...DEFAULT_EXPENSE_FORM }));
+      setExpenseModalOpen(false);
+      if (typeof onRequestRefresh === "function") {
+        onRequestRefresh(metadataFiltersWithScope || {});
+      }
+    } catch (err) {
+      setFormStatus({ type: "error", message: err.message || "Failed to capture expense." });
+    } finally {
+      setSubmittingExpense(false);
+    }
+  };
+
+  const handleAppointmentSelection = (event) => {
+    const value = event.target.value;
+    setFormState((prev) => ({ ...prev, caid: value || "" }));
+    if (formErrors.caid) {
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next.caid;
+        return next;
+      });
+    }
+  };
+
+  const handleFieldChange = (field) => (event) => {
+    const { value } = event.target;
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    if (formErrors[field]) {
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleOpenExpenseModal = () => {
+    if (!hasConnector) return;
+    setFormErrors({});
+    setFormStatus(null);
+    setExpenseModalOpen(true);
+  };
+
+  const handleCloseExpenseModal = () => {
+    setExpenseModalOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
           Failed to refresh billing data: {error}
         </div>
       )}
-      {!data && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-          Showing inline mock data until the billing API is wired up.
+      {!usingLiveData && !error && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
+          No billing data returned yet. Adjust filters or retry once the backend is available.
         </div>
       )}
-      {hasConnector && usingLiveData && (
-        <div className="flex flex-col gap-1 text-xs text-emerald-600">
-          <span>Connected via BillingConnector{lastSyncedLabel ? ` - Last synced ${lastSyncedLabel}` : ""}</span>
-          <span className="text-slate-500">Scope: {filtersSummary}</span>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-1 text-xs">
+          {hasConnector && usingLiveData ? (
+            <>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {lastSyncedLabel ? `Last synced ${lastSyncedLabel}` : ""}
+              </span>
+              <span className="text-slate-500 dark:text-slate-400">Scope: {filtersSummary}</span>
+            </>
+          ) : (
+            <span className="text-slate-500 dark:text-slate-400">Scope: {filtersSummary}</span>
+          )}
         </div>
-      )}
+        <div className="flex flex-col items-stretch gap-2 md:items-end">
+          {formStatus && !isExpenseModalOpen && (
+            <div
+              className={`text-xs px-3 py-2 rounded-lg border ${
+                formStatus.type === "success"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-200"
+                  : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200"
+              }`}
+            >
+              {formStatus.message}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleOpenExpenseModal}
+            disabled={!hasConnector}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              hasConnector
+                ? "bg-teal-600 text-white hover:bg-teal-700"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400"
+            }`}
+          >
+            <Plus className="w-4 h-4" /> Capture Expense
+          </button>
+        </div>
+      </div>
+
+      <Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Hospital</label>
+            <select
+              value={filterForm.hospitalId}
+              onChange={handleFilterFieldChange("hospitalId")}
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+            >
+              <option value="">All hospitals</option>
+              {hospitalFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Department</label>
+            <select
+              value={filterForm.departmentId}
+              onChange={handleFilterFieldChange("departmentId")}
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+            >
+              <option value="">All departments</option>
+              {departmentFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Coverage</label>
+            <select
+              value={filterForm.insuranceId}
+              onChange={handleFilterFieldChange("insuranceId")}
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+            >
+              {coverageFilterOptions.map((option) => (
+                <option key={option.value || "all"} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1">Window</label>
+            <select
+              value={filterForm.daysBack}
+              onChange={handleFilterFieldChange("daysBack")}
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+            >
+              {daysBackOptions.map((value) => (
+                <option key={value} value={value.toString()}>
+                  Last {value} days
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end mt-4">
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30"
+            disabled={isDefaultFilterState}
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={handleApplyFilters}
+            disabled={!canApplyFilters}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold text-white ${
+              canApplyFilters ? "bg-teal-600 hover:bg-teal-700" : "bg-slate-300 cursor-not-allowed dark:bg-slate-700"
+            }`}
+          >
+            Apply Filters
+          </button>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {preparedKpis.map((kpi) => (
@@ -356,13 +657,13 @@ const BillingView = ({ data, error, billingConnector }) => {
                 <div key={bucket.type} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{bucket.type}</p>
-                    <p className="text-xs text-slate-500">{bucket.activities} activities</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{bucket.activities} activities</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                       {formatCurrency(bucket.amount, { compact: true })}
                     </p>
-                    <p className="text-xs text-slate-500">{bucket.resolvedShare}% share</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{bucket.resolvedShare}% share</p>
                   </div>
                 </div>
               ))}
@@ -373,14 +674,14 @@ const BillingView = ({ data, error, billingConnector }) => {
         <Card title="Medication Utilization Snapshot">
           <div className="space-y-4">
             {medicationSnapshot.length === 0 && (
-              <p className="text-sm text-slate-500">No prescriptions recorded for the selected filters.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No prescriptions recorded for the selected filters.</p>
             )}
             {medicationSnapshot.map((med) => (
               <div key={med.mid} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{med.name}</p>
-                    <p className="text-xs text-slate-500">{med.therapeuticClass} - {med.shareLabel}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{med.therapeuticClass} - {med.shareLabel}</p>
                   </div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{med.prescriptions} rx</p>
                 </div>
@@ -400,7 +701,7 @@ const BillingView = ({ data, error, billingConnector }) => {
         <Card className="xl:col-span-2" title="Hospital Billing Overview">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-slate-500">
+              <thead className="text-left text-slate-500 dark:text-slate-300">
                 <tr>
                   <th className="py-3 px-4">Hospital</th>
                   <th className="py-3 px-4">Region</th>
@@ -414,18 +715,18 @@ const BillingView = ({ data, error, billingConnector }) => {
                 {hospitalPreview.map((row) => (
                   <tr key={row.hid}>
                     <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-100">{row.name}</td>
-                    <td className="py-3 px-4 text-slate-500">{row.region}</td>
-                    <td className="py-3 px-4 text-right">{row.activities?.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right">{formatPercentLabel(row.insuredShare)}</td>
-                    <td className="py-3 px-4 text-right">{formatCurrency(row.avgExpense, { minimumFractionDigits: 0 })}</td>
-                    <td className="py-3 px-4 text-right font-semibold">
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{row.region}</td>
+                    <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-200">{row.activities?.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-200">{formatPercentLabel(row.insuredShare)}</td>
+                    <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-200">{formatCurrency(row.avgExpense, { minimumFractionDigits: 0 })}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-slate-800 dark:text-slate-100">
                       {formatCurrency(row.total, { minimumFractionDigits: 0 })}
                     </td>
                   </tr>
                 ))}
                 {!hospitalPreview.length && (
                   <tr>
-                    <td className="py-6 text-center text-slate-500" colSpan={6}>
+                    <td className="py-6 text-center text-slate-500 dark:text-slate-400" colSpan={6}>
                       No hospital data for the selected filters.
                     </td>
                   </tr>
@@ -438,7 +739,7 @@ const BillingView = ({ data, error, billingConnector }) => {
         <Card title="Department Leaderboard">
           <div className="space-y-4">
             {departmentLeaders.leaders.length === 0 && (
-              <p className="text-sm text-slate-500">No department activity recorded.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No department activity recorded.</p>
             )}
             {departmentLeaders.leaders.map((dept) => {
               const isAboveAverage = departmentLeaders.avg && dept.total >= departmentLeaders.avg;
@@ -447,11 +748,11 @@ const BillingView = ({ data, error, billingConnector }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{dept.department}</p>
-                      <p className="text-xs text-slate-500">{dept.hospital} - {dept.specialty}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{dept.hospital} - {dept.specialty}</p>
                     </div>
                     {isAboveAverage && <Badge color="green">Above avg</Badge>}
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>{dept.activities} activities</span>
                     {typeof dept.avgExpense === "number" && (
                       <span>Avg {formatCurrency(dept.avgExpense, { minimumFractionDigits: 0 })}</span>
@@ -473,9 +774,9 @@ const BillingView = ({ data, error, billingConnector }) => {
           <select
             value={insuranceFilter}
             onChange={(event) => setInsuranceFilter(event.target.value)}
-            className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1 bg-white dark:bg-slate-900"
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
           >
-            {insuranceOptions.map((option) => (
+            {insuranceFilterOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -485,7 +786,7 @@ const BillingView = ({ data, error, billingConnector }) => {
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-slate-500">
+            <thead className="text-left text-slate-500 dark:text-slate-300">
               <tr>
                 <th className="py-3 px-4">Expense</th>
                 <th className="py-3 px-4">CAID</th>
@@ -505,20 +806,20 @@ const BillingView = ({ data, error, billingConnector }) => {
                   onClick={() => setSelectedExpense(expense)}
                 >
                   <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-100">{expense.expId}</td>
-                  <td className="py-3 px-4 text-slate-500">{expense.caid ?? "--"}</td>
-                  <td className="py-3 px-4">{formatDateOnly(expense.activityDate)}</td>
-                  <td className="py-3 px-4">{expense.hospital?.name}</td>
-                  <td className="py-3 px-4">{expense.department?.name}</td>
-                  <td className="py-3 px-4">{expense.patient?.fullName}</td>
-                  <td className="py-3 px-4">{expense.insurance?.type || "Self-Pay"}</td>
-                  <td className="py-3 px-4 text-right font-semibold">
+                  <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{expense.caid ?? "--"}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{formatDateOnly(expense.activityDate)}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.hospital?.name}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.department?.name}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.patient?.fullName}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-200">{expense.insurance?.type || "Self-Pay"}</td>
+                  <td className="py-3 px-4 text-right font-semibold text-slate-800 dark:text-slate-100">
                     {formatCurrency(expense.total, { minimumFractionDigits: 0 })}
                   </td>
                 </tr>
               ))}
               {!filteredExpenses.length && (
                 <tr>
-                  <td className="py-6 text-center text-slate-500" colSpan={8}>
+                  <td className="py-6 text-center text-slate-500 dark:text-slate-400" colSpan={8}>
                     No expenses for the selected filter.
                   </td>
                 </tr>
@@ -526,10 +827,103 @@ const BillingView = ({ data, error, billingConnector }) => {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
           Each row represents one Expense linked 1:1 to a ClinicalActivity (CAID) using the lab schema.
         </p>
       </Card>
+
+      <Modal isOpen={isExpenseModalOpen} onClose={handleCloseExpenseModal} title="Capture Expense">
+        <form className="space-y-5" onSubmit={handleExpenseSubmit}>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              Select clinical activity (required)
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+              value={formState.caid ? formState.caid.toString() : ""}
+              onChange={handleAppointmentSelection}
+              required
+            >
+              <option value="">-- Choose an appointment --</option>
+              {appointmentOptions.map((apt) => (
+                <option key={apt.id} value={apt.id?.toString() ?? ""}>
+                  #{apt.id} · {apt.patient} · {apt.department} · {apt.date}
+                </option>
+              ))}
+            </select>
+            {formErrors.caid && <p className="text-xs text-red-600">{formErrors.caid}</p>}
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>Refresh to pull the latest Appointments dataset.</span>
+              <button
+                type="button"
+                className="text-teal-600 hover:text-teal-700 font-medium dark:text-teal-400 dark:hover:text-teal-300"
+                onClick={() => loadAppointmentOptions({ forceRefresh: true })}
+                disabled={isLoadingAppointments}
+              >
+                {isLoadingAppointments ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+            {appointmentsError && <p className="text-xs text-red-600">{appointmentsError}</p>}
+          </div>
+
+          {selectedAppointment && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-3 text-sm">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">{selectedAppointment.patient}</p>
+              <p className="text-slate-500 dark:text-slate-400">
+                {selectedAppointment.hospital} · {selectedAppointment.department}
+              </p>
+              <p className="text-slate-500 dark:text-slate-400">Doctor: {selectedAppointment.staff}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Appointment #{selectedAppointment.id} on {selectedAppointment.date}</p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Insurance</label>
+            <select
+              value={formState.insId}
+              onChange={handleFieldChange("insId")}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+            >
+              <option value="">Keep CA defaults</option>
+              {insurerOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {formErrors.insId && <p className="text-xs text-red-600 mt-1">{formErrors.insId}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Total (MAD)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formState.total}
+              onChange={handleFieldChange("total")}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100"
+              placeholder="0.00"
+            />
+            {formErrors.total && <p className="text-xs text-red-600 mt-1">{formErrors.total}</p>}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={handleCloseExpenseModal} className="px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-300">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmittingExpense}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold text-white ${
+                isSubmittingExpense ? "bg-teal-400" : "bg-teal-600 hover:bg-teal-700"
+              }`}
+            >
+              {isSubmittingExpense ? "Saving..." : "Save Expense"}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Drawer
         isOpen={Boolean(selectedExpense)}
@@ -539,48 +933,48 @@ const BillingView = ({ data, error, billingConnector }) => {
         {selectedExpense && (
           <div className="space-y-5 text-sm">
             <div>
-              <p className="text-xs uppercase text-slate-500">Patient</p>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Patient</p>
               <p className="text-base font-semibold text-slate-800 dark:text-slate-100">
                 {selectedExpense.patient?.fullName}
               </p>
-              <p className="text-slate-500">
+              <p className="text-slate-500 dark:text-slate-400">
                 {selectedExpense.hospital?.name} - {selectedExpense.department?.name}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs uppercase text-slate-500">Insurance</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Insurance</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">
                   {selectedExpense.insurance?.type || "Self-Pay"}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-500">Clinical Activity</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Clinical Activity</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">{selectedExpense.caid ?? "--"}</p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-500">Attending Staff</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Attending Staff</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">
                   {selectedExpense.staff?.fullName}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase text-slate-500">Billed On</p>
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Billed On</p>
                 <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateTime(selectedExpense.activityDate)}</p>
               </div>
             </div>
 
             {selectedExpense.prescription && (
               <div>
-                <p className="text-xs uppercase text-slate-500 mb-2">Prescription #{selectedExpense.prescription.pid}</p>
-                {drawerMedications.length === 0 && <p className="text-slate-500">No medications recorded.</p>}
+                <p className="text-xs uppercase text-slate-500 dark:text-slate-400 mb-2">Prescription #{selectedExpense.prescription.pid}</p>
+                {drawerMedications.length === 0 && <p className="text-slate-500 dark:text-slate-400">No medications recorded.</p>}
                 <div className="space-y-3">
                   {drawerMedications.map((med) => (
                     <div key={med.mid} className="flex justify-between text-slate-700 dark:text-slate-200">
                       <div>
                         <p className="font-medium">{med.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {med.dosage || "Dose N/A"} - {med.duration || "Duration N/A"}
                         </p>
                       </div>
@@ -592,7 +986,7 @@ const BillingView = ({ data, error, billingConnector }) => {
             )}
 
             <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-4">
-              <p className="text-xs uppercase text-slate-500">Total</p>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Total</p>
               <p className="text-lg font-bold text-slate-900 dark:text-white">
                 {formatCurrency(selectedExpense.total, { minimumFractionDigits: 0 })}
               </p>
