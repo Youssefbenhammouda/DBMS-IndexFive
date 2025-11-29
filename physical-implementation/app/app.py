@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from src.db import create_pool, aiomysql
 from src.pages.medications import (
     MedicationIn,
@@ -21,6 +21,7 @@ from src.models import *
 from typing import AsyncIterator, List
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+from src.pages.appointments import schedule_appointment, get_all_appointments
 
 load_dotenv()
 
@@ -217,3 +218,29 @@ async def post_medication_stock(
 
 
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")
+
+# GET /api/appointments
+@app.get("/api/appointments")
+async def get_appointments(conn: aiomysql.Connection = Depends(get_conn)):
+    data = await get_all_appointments(conn)
+    return data
+
+@app.post("/api/appointments", status_code=201)
+async def post_appointments(request: Request, conn: aiomysql.Connection = Depends(get_conn)):
+    try:
+        data = await request.json()
+        result = await schedule_appointment(
+            conn=conn,
+            date_=datetime.strptime(data["date"], "%Y-%m-%d").date(),
+            time_=datetime.strptime(data["time"], "%H:%M").time(),
+            hospital_name=data["hospital"],
+            department_name=data["department"],
+            patient_name=data["patient"],
+            staff_name=data["staff"],
+            reason=data["reason"],
+            status=data["status"]
+        )
+        return result
+    except Exception as e:
+        await conn.rollback()
+        return JSONResponse(status_code=500, content={"message": str(e)})
