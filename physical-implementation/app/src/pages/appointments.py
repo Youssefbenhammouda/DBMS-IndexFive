@@ -1,7 +1,9 @@
 import aiomysql
-from typing import AsyncIterator, List, Dict, Any, Optional, Literal
-from pydantic import BaseModel
+import aiomysql.cursors
+from typing import Optional, Dict, Literal
 from datetime import datetime, date, time
+
+ALLOWED_STATUSES = {"Scheduled", "Completed", "Cancelled", "No Show"}
 
 
 async def get_all_appointments(
@@ -10,35 +12,47 @@ async def get_all_appointments(
     status: Optional[str] = None,
     hospital: Optional[str] = None,
 ) -> Dict:
-    async with conn.cursor(aiomysql.DictCursor) as cur:
-        # Base query joining ClinicalActivity, Appointment, Patient, Staff, Department, Hospital
+    """
+    Return {"appointments": [...], "lastSyncedAt": "...Z"}
+    """
+    # validate status filter if provided
+    if status and status not in ALLOWED_STATUSES:
+        raise ValueError(f"Invalid status filter: {status}")
+
+    async with conn.cursor(aiomysql.cursors.DictCursor) as cur:
         query = """
-                SELECT 
-                    ap.CAID AS id,
-                    ca.Date AS date,
-                    ca.Time AS time,
-                    h.Name AS hospital,
-                    d.Name AS department,
-                    p.FullName AS patient,
-                    s.Name AS staff,
-                    ap.Reason AS reason,
-                    ap.Status AS status
-                FROM Appointment ap
-                JOIN ClinicalActivity ca ON ap.CAID = ca.CAID
-                JOIN Patient p ON ca.IID = p.IID
-                JOIN Staff s ON ca.STAFF_ID = s.STAFF_ID
-                JOIN Department d ON ca.DEP_ID = d.DEP_ID
-                JOIN Hospital h ON d.HID = h.HID
-                WHERE 1=1
-                """
+            SELECT 
+                ap.CAID AS id,
+                ca.Date AS date,
+                ca.Time AS time,
+                h.Name AS hospital,
+                d.Name AS department,
+                p.FullName AS patient,
+                s.Name AS staff,
+                ap.Reason AS reason,
+                ap.Status AS status
+            FROM Appointment ap
+            JOIN ClinicalActivity ca ON ap.CAID = ca.CAID
+            JOIN Patient p ON ca.IID = p.IID
+            JOIN Staff s ON ca.STAFF_ID = s.STAFF_ID
+            JOIN Department d ON ca.DEP_ID = d.DEP_ID
+            JOIN Hospital h ON d.HID = h.HID
+            WHERE 1=1
+        """
 
         params = []
 
-        # Apply filters if provided
+        # date_range format: "YYYY-MM-DD..YYYY-MM-DD"
         if date_range:
-            start, end = date_range.split("..")
+            try:
+                start_str, end_str = date_range.split("..")
+                # validate date formats
+                _ = datetime.strptime(start_str, "%Y-%m-%d").date()
+                _ = datetime.strptime(end_str, "%Y-%m-%d").date()
+            except Exception:
+                raise ValueError("date_range must be 'YYYY-MM-DD..YYYY-MM-DD'")
             query += " AND ca.Date BETWEEN %s AND %s"
-            params.extend([start, end])
+            params.extend([start_str, end_str])
 
         if status:
             query += " AND ap.Status = %s"
@@ -49,34 +63,37 @@ async def get_all_appointments(
             params.append(hospital)
 
         await cur.execute(query, params)
-        results = await cur.fetchall()
+        rows = await cur.fetchall()
 
-        # Format date and time as strings
         appointments = []
-        for row in results:
+        for row in rows:
+            # row['date'] and row['time'] may be datetime/date/time objects or strings depending on driver
+            d = row.get("date")
+            t = row.get("time")
+            date_str = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else (d if d is not None else None)
+            time_str = t.strftime("%H:%M") if hasattr(t, "strftime") else (t if t is not None else None)
+
             appointments.append(
                 {
                     "id": f"APT-{row['id']}",
-                    "date": row["date"].strftime("%Y-%m-%d"),
-                    "time": row["time"].strftime("%H:%M") if row["time"] else None,
-                    "hospital": row["hospital"],
-                    "department": row["department"],
-                    "patient": row["patient"],
-                    "staff": row["staff"],
-                    "reason": row["reason"],
-                    "status": row["status"],
+                    "date": date_str,
+                    "time": time_str,
+                    "hospital": row.get("hospital"),
+                    "department": row.get("department"),
+                    "patient": row.get("patient"),
+                    "staff": row.get("staff"),
+                    "reason": row.get("reason"),
+                    "status": row.get("status"),
                 }
             )
-    return {
-        "appointments": appointments,
-        "lastSyncedAt": datetime.utcnow().isoformat() + "Z",
-    }
+
+    return {"appointments": appointments, "lastSyncedAt": datetime.utcnow().isoformat() + "Z"}
 
 
 async def schedule_appointment(
     conn: aiomysql.Connection,
     date_: date,
-    time_: time,
+    time_: Optional[time],
     hospital_name: str,
     department_name: str,
     patient_name: str,
@@ -85,65 +102,77 @@ async def schedule_appointment(
     status: Literal["Scheduled", "Completed", "Cancelled"] = "Scheduled",
     appointment_id: Optional[str] = None,
 ) -> Dict:
-    async with conn.cursor() as cur:
-        # Resolve Patient ID
-        await cur.execute("SELECT IID FROM Patient WHERE FullName=%s", (patient_name,))
-        patient_row = await cur.fetchone()
-        if not patient_row:
-            raise ValueError(f"Patient '{patient_name}' not found")
-        idd = patient_row[0]
+    """
+    Insert ClinicalActivity + Appointment and return canonical appointment dict.
+    Rolls back on error.
+    """
+    if status not in {"Scheduled", "Completed", "Cancelled"}:
+        raise ValueError("Invalid status value")
 
-        # Resolve Staff ID
-        await cur.execute("SELECT STAFF_ID FROM Staff WHERE Name=%s", (staff_name,))
-        staff_row = await cur.fetchone()
-        if not staff_row:
-            raise ValueError(f"Staff '{staff_name}' not found")
-        staff_id = staff_row[0]
+    try:
+        async with conn.cursor() as cur:
+            # Resolve patient IID
+            await cur.execute("SELECT IID FROM Patient WHERE FullName=%s", (patient_name,))
+            patient_row = await cur.fetchone()
+            if not patient_row:
+                raise ValueError(f"Patient '{patient_name}' not found")
+            iid = patient_row[0]
 
-        # Resolve Department ID and Hospital ID
-        await cur.execute(
-            """
-            SELECT d.DEP_ID FROM Department d
-            JOIN Hospital h ON d.HID = h.HID
-            WHERE d.Name=%s AND h.Name=%s
-            """,
-            (department_name, hospital_name),
-        )
-        dep_row = await cur.fetchone()
-        if not dep_row:
-            raise ValueError(
-                f"Department '{department_name}' in Hospital '{hospital_name}' not found"
+            # Resolve staff id
+            await cur.execute("SELECT STAFF_ID FROM Staff WHERE Name=%s", (staff_name,))
+            staff_row = await cur.fetchone()
+            if not staff_row:
+                raise ValueError(f"Staff '{staff_name}' not found")
+            staff_id = staff_row[0]
+
+            # Resolve department
+            await cur.execute(
+                """
+                SELECT d.DEP_ID FROM Department d
+                JOIN Hospital h ON d.HID = h.HID
+                WHERE d.Name=%s AND h.Name=%s
+                """,
+                (department_name, hospital_name),
             )
-        dep_id = dep_row[0]
+            dep_row = await cur.fetchone()
+            if not dep_row:
+                raise ValueError(f"Department '{department_name}' in Hospital '{hospital_name}' not found")
+            dep_id = dep_row[0]
 
-        # Insert into ClinicalActivity
-        await cur.execute(
-            """
-            INSERT INTO ClinicalActivity (Time, Date, IID, DEP_ID, STAFF_ID)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (time_, date_, idd, dep_id, staff_id),
-        )
+            # Insert ClinicalActivity (match your table column order: Time, Date, IID, DEP_ID, STAFF_ID)
+            await cur.execute(
+                """
+                INSERT INTO ClinicalActivity (Time, Date, IID, DEP_ID, STAFF_ID)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (time_, date_, iid, dep_id, staff_id),
+            )
+            caid = cur.lastrowid
 
-        caid = cur.lastrowid
+            # Insert Appointment
+            await cur.execute(
+                """
+                INSERT INTO Appointment (CAID, Status, Reason)
+                VALUES (%s, %s, %s)
+                """,
+                (caid, status, reason),
+            )
 
-        # Insert into Appointment
-        await cur.execute(
-            """
-            INSERT INTO Appointment (CAID, Status, Reason)
-            VALUES (%s, %s, %s)
-            """,
-            (caid, status, reason),
-        )
+            await conn.commit()
 
-        # Commit changes
-        await conn.commit()
+    except Exception:
+        # ensure DB is not left in partial state
+        try:
+            await conn.rollback()
+        except Exception:
+            pass
+        raise  # re-raise so caller (endpoint) can turn into HTTP response
 
     return {
         "appointment": {
             "id": f"APT-{caid}",
             "date": date_.strftime("%Y-%m-%d"),
-            "time": time_.strftime("%H:%M"),
+            "time": time_.strftime("%H:%M") if time_ else None,
             "hospital": hospital_name,
             "department": department_name,
             "patient": patient_name,
