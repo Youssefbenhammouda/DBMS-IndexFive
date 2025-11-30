@@ -49,3 +49,8 @@
 - Integration & QA: once endpoints matched the contract, the whole team exercised every page through the FastAPI dev server plus Swagger docs to verify data flows, error handling, and the compiled UI bundled under `dist/`.
 
 The team leveraged AI assistance during multiple UI iterations and for shaping some backend scaffolding, but all database modeling, migrations, and tuning were authored entirely by the team.
+
+
+## 4. Views and Triggers
+
+All SQL views and triggers are available in the parent directory `\physical-implementation`
