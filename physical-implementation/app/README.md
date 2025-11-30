@@ -15,7 +15,7 @@
 - **Create virtual environment**
    - From the repo root: `cd physical-implementation\app`.
    - `python -m venv .venv`
-   - `\.venv\Scripts\activate`
+   - `.venv\Scripts\activate`
 
 - **Install dependencies**
    - `pip install --upgrade pip`
