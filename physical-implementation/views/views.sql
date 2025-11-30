@@ -8,7 +8,7 @@ FROM Appointment A
     JOIN ClinicalActivity CA ON CA.CAID = A.CAID
     JOIN Department D ON D.DEP_ID = CA.DEP_ID
     JOIN Hospital H ON H.HID = D.HID
-WHERE A.Status = Scheduled
+WHERE A.Status = 'Scheduled'
     AND (
         CA.Date BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 14 DAY)
     )
