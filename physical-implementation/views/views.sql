@@ -36,7 +36,7 @@ GROUP BY S.HID, H.Name, S.MID, M.Name;
 CREATE OR REPLACE VIEW StaffWorkloadThirty AS
 SELECT 
     S.STAFF_ID AS STAFF_ID,
-    S.FullName AS FullName,
+    S.Name AS FullName,
     COUNT(CA.CAID) AS TotalAppointments,
     COUNT(CASE WHEN A.Status = 'Scheduled' THEN 1 END) AS ScheduledCount,
     COUNT(CASE WHEN A.Status = 'Completed' THEN 1 END) AS CompletedCount,
@@ -45,22 +45,21 @@ FROM staff S
     JOIN ClinicalActivity CA ON CA.STAFF_ID = S.STAFF_ID
     JOIN Appointment A ON A.CAID = CA.CAID
 WHERE CA.DATE BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
-GROUP BY S.STAFF_ID, S.FullName;
+GROUP BY S.STAFF_ID, S.Name;
 
 -- view 4
 CREATE VIEW PatientNextVisit AS
 WITH NextVisit AS (
     SELECT
         p.IID,
-        p.FullName AS FullName,
-        ca.Date AS NextApptDate,
-        ca.Time AS NextApptTime,
+        p.Name AS FullName,
+        ca.occurred_at AS NextApptDate,
         d.Name AS DepartmentName,
         h.Name AS HospitalName,
         h.City AS City,
         ROW_NUMBER() OVER (
             PARTITION BY p.IID
-            ORDER BY ca.Date,ca.Time
+            ORDER BY ca.occurred_at
         ) AS rownum
     FROM Patient p
     JOIN Clinical_Activity ca
@@ -73,7 +72,7 @@ WITH NextVisit AS (
         ON h.HID = d.HID
     WHERE
         a.Status = 'Scheduled'
-        AND ca.Date > CURDATE()
+        AND ca.occurred_at > CURDATE()
 )
 SELECT
     IID,
