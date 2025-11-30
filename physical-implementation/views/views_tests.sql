@@ -1,5 +1,3 @@
-
-USE lab3;
 INSERT INTO Hospital(HID, Name, City, Region) VALUES
 (100, 'Test Hospital', 'TestCity', 'TestRegion')
 ON DUPLICATE KEY UPDATE Name = VALUES(Name);
