@@ -43,6 +43,9 @@
 - **Shut down**
    - Press `Ctrl+C`, then `deactivate` to leave the virtual environment.
 
+- You will find as a fallback option, dump.sql in the repo root, which contains the full MNHS schema and sample data that we used for testing.
+
+
 ## 3. Roadmap & Team Workflow
 - Two-track delivery: Youssef Benhammouda owned the frontend, rapidly prototyping with AI-generated scaffolds and then polishing interactions by hand, while the backend team (Biar Adam — team lead, Yahia Belfquih, Zakarya Aze-Dine, Adam Ajerouassi) implemented the MNHS data layer and APIs.
 - Frontend-to-backend contract: the UI owner produced the `requirements/` specs (endpoint signatures, payloads, models) consumed by the backend engineers to keep both tracks aligned.
