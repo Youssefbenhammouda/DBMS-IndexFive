@@ -43,9 +43,17 @@
 - **Shut down**
    - Press `Ctrl+C`, then `deactivate` to leave the virtual environment.
 
+- You will find as a fallback option, dump.sql in the repo root, which contains the full MNHS schema and sample data that we used for testing.
+
+
 ## 3. Roadmap & Team Workflow
 - Two-track delivery: Youssef Benhammouda owned the frontend, rapidly prototyping with AI-generated scaffolds and then polishing interactions by hand, while the backend team (Biar Adam — team lead, Yahia Belfquih, Zakarya Aze-Dine, Adam Ajerouassi) implemented the MNHS data layer and APIs.
 - Frontend-to-backend contract: the UI owner produced the `requirements/` specs (endpoint signatures, payloads, models) consumed by the backend engineers to keep both tracks aligned.
 - Integration & QA: once endpoints matched the contract, the whole team exercised every page through the FastAPI dev server plus Swagger docs to verify data flows, error handling, and the compiled UI bundled under `dist/`.
 
 The team leveraged AI assistance during multiple UI iterations and for shaping some backend scaffolding, but all database modeling, migrations, and tuning were authored entirely by the team.
+
+
+## 4. Views and Triggers
+
+All SQL views and triggers are available in the parent directory `\physical-implementation`
