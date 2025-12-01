@@ -35,49 +35,47 @@ GROUP BY S.HID, H.Name, S.MID, M.Name;
 -- view 3
 CREATE OR REPLACE VIEW StaffWorkloadThirty AS
 SELECT 
-    S.STAFF_ID AS STAFF_ID,
-    S.Name AS FullName,
+    S.STAFF_ID,
+    S.FullName,
     COUNT(CA.CAID) AS TotalAppointments,
     COUNT(CASE WHEN A.Status = 'Scheduled' THEN 1 END) AS ScheduledCount,
     COUNT(CASE WHEN A.Status = 'Completed' THEN 1 END) AS CompletedCount,
     COUNT(CASE WHEN A.Status = 'Cancelled' THEN 1 END) AS CancelledCount
-FROM staff S
-    JOIN ClinicalActivity CA ON CA.STAFF_ID = S.STAFF_ID
-    JOIN Appointment A ON A.CAID = CA.CAID
-WHERE CA.DATE BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
-GROUP BY S.STAFF_ID, S.Name;
+FROM Staff S
+JOIN ClinicalActivity CA ON CA.STAFF_ID = S.STAFF_ID
+JOIN Appointment A ON A.CAID = CA.CAID
+WHERE CA.Date BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY)
+GROUP BY S.STAFF_ID, S.FullName;
 
 -- view 4
-CREATE VIEW PatientNextVisit AS
+CREATE OR REPLACE VIEW PatientNextVisit AS
 WITH NextVisit AS (
     SELECT
-        p.IID,
-        p.Name AS FullName,
-        ca.occurred_at AS NextApptDate,
-        d.Name AS DepartmentName,
-        h.Name AS HospitalName,
-        h.City AS City,
+        P.IID,
+        P.FullName,
+        CA.Date AS NextApptDate,
+        CA.Time AS NextApptTime,
+        D.Name AS DepartmentName,
+        H.Name AS HospitalName,
+        H.City AS City,
         ROW_NUMBER() OVER (
-            PARTITION BY p.IID
-            ORDER BY ca.occurred_at
+            PARTITION BY P.IID
+            ORDER BY CA.Date, CA.Time
         ) AS rownum
-    FROM Patient p
-    JOIN Clinical_Activity ca
-        ON ca.IID = p.IID
-    JOIN Appointment a
-        ON a.CAID = ca.CAID
-    JOIN Department d
-        ON d.DEP_ID = ca.DEP_ID
-    JOIN Hospital h
-        ON h.HID = d.HID
+    FROM Patient P
+    JOIN ClinicalActivity CA ON CA.IID = P.IID
+    JOIN Appointment A ON A.CAID = CA.CAID
+    JOIN Department D ON D.DEP_ID = CA.DEP_ID
+    JOIN Hospital H ON H.HID = D.HID
     WHERE
-        a.Status = 'Scheduled'
-        AND ca.occurred_at > CURDATE()
+        A.Status = 'Scheduled'
+        AND CA.Date > CURDATE()
 )
 SELECT
     IID,
     FullName,
     NextApptDate,
+    NextApptTime,
     DepartmentName,
     HospitalName,
     City
