@@ -12,7 +12,7 @@ ON Appointment(CAID,Status);
 -- Optimizes join with Department and filtering by appointment date range
 
 CREATE INDEX idx_ClinicalActivity_CAID_DEP_ID_Date
-ON ClinicalActivity(CAID,DEP_ID,Date);
+ON ClinicalActivity(DEP_ID,Date);
 
 
 
