@@ -48,7 +48,7 @@ ON ClinicalActivity(STAFF_ID,Date);
 
 -- index 2:
 
---Optimizes partitionning by patient and ordering by appointment date and time
+-- Optimizes partitionning by patient and ordering by appointment date and time
 
 CREATE INDEX idx_ClinicalActivity_IID_Date_Time
 ON ClinicalActivity(IID,Date,Time);
