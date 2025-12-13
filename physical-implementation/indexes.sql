@@ -11,7 +11,7 @@ ON Appointment(CAID,Status);
 
 -- Optimizes join with Department and filtering by appointment date range
 
-CREATE INDEX idx_ClinicalActivity_CAID_DEP_ID_Date
+CREATE INDEX idx_ClinicalActivity_DEP_ID_Date
 ON ClinicalActivity(DEP_ID,Date);
 
 
@@ -23,9 +23,7 @@ ON ClinicalActivity(DEP_ID,Date);
 -- index 1 :
 
 -- Improves join with Appointment and status-based aggregation
-
-CREATE INDEX idx_appointment_CAID_Status
-ON Appointment(CAID,Status);
+-- Uses idx_appointment_CAID_Status
 
 -- index 2:
 
@@ -46,8 +44,7 @@ ON ClinicalActivity(STAFF_ID,Date);
 
 -- Improves join with ClinicalActivity and filters scheduled appointments
 
-CREATE INDEX idx_appointment_CAID_Status
-ON Appointment(CAID,Status);
+-- Uses idx_appointment_CAID_Status
 
 -- index 2:
 
