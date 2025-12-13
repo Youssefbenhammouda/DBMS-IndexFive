@@ -1,0 +1,83 @@
+# UM6P Data Management Lab 7 - Parts 3 & 4
+
+## Part 3: Identifying Types of Schedules
+
+**Context:**
+* Transaction 1 ($T_1$): R(A), W(A)
+* Transaction 2 ($T_2$): R(B), W(B)
+* Schedule $S_1$: $R_1(A), R_2(B), W_1(A), W_2(B)$
+* Schedule $S_2$: $R_1(A), W_1(A), R_2(B), W_2(B)$
+
+### 1. Are the schedules $S_1$ and $S_2$ equivalent? Justify your answer.
+
+**Answer:** Yes.
+
+**Justification:**
+Two schedules are **conflict equivalent** if they have the same operations and the order of all *conflicting* operations is the same.
+* $T_1$ reads and writes item **A**.
+* $T_2$ reads and writes item **B**.
+* Because A and B are different data items, there are **no conflicting operations** between $T_1$ and $T_2$.
+* When there are no conflicts, the operations can be swapped freely without changing the result. Therefore, the interleaved schedule $S_1$ is equivalent to the serial schedule $S_2$.
+
+### 2. Is $S_1$ serializable? If yes, give an equivalent serial schedule.
+
+**Answer:** Yes.
+
+**Equivalent Serial Schedule:**
+Since there are no conflicts, $S_1$ is equivalent to any serial order of the transactions.
+* **Option A:** $T_1 \to T_2$ ($R_1(A), W_1(A), R_2(B), W_2(B)$)
+* **Option B:** $T_2 \to T_1$ ($R_2(B), W_2(B), R_1(A), W_1(A)$)
+
+---
+
+## Part 4: Conflict Serializability
+
+**Context:**
+* $T_1$: R(A), W(A)
+* $T_2$: W(A), R(B)
+* $T_3$: R(A), W(B)
+* Schedule $S_3$: $R_1(A), W_2(A), R_3(A), W_1(A), W_3(B), R_2(B)$
+
+### 1. Construct the precedence (dependency) graph for $S_3$
+
+To verify conflict serializability, we look for conflicting operations (Read-Write, Write-Read, Write-Write) on the same data item where the operation in one transaction precedes the other.
+
+**Conflicts identified in Schedule $S_3$:**
+
+1.  **Conflict on A ($R_1$ vs $W_2$):**
+    * $R_1(A)$ occurs before $W_2(A)$.
+    * **Edge:** $T_1 \to T_2$
+2.  **Conflict on A ($W_2$ vs $R_3$):**
+    * $W_2(A)$ occurs before $R_3(A)$.
+    * **Edge:** $T_2 \to T_3$
+3.  **Conflict on A ($W_2$ vs $W_1$):**
+    * $W_2(A)$ occurs before $W_1(A)$.
+    * **Edge:** $T_2 \to T_1$
+4.  **Conflict on A ($R_3$ vs $W_1$):**
+    * $R_3(A)$ occurs before $W_1(A)$.
+    * **Edge:** $T_3 \to T_1$
+5.  **Conflict on B ($W_3$ vs $R_2$):**
+    * $W_3(B)$ occurs before $R_2(B)$.
+    * **Edge:** $T_3 \to T_2$
+
+**Resulting Precedence Graph (Text Representation):**
+* Node $T_1$ has incoming edges from $T_2$ and $T_3$.
+* Node $T_2$ has incoming edges from $T_1$ and $T_3$.
+* Node $T_3$ has incoming edges from $T_2$.
+
+**Visual Logic:**
+* $T_1 \leftrightarrow T_2$ (Double arrow / Cycle)
+* $T_2 \leftrightarrow T_3$ (Double arrow / Cycle)
+
+### 2. Is $S_3$ conflict serializable? Justify your answer using the graph.
+
+**Answer:** No.
+
+**Justification:**
+A schedule is conflict serializable **if and only if its precedence graph is acyclic** (contains no cycles). The graph for $S_3$ contains multiple cycles, which proves it is not serializable.
+
+**Cycles present in the graph:**
+1.  **Cycle 1 ($T_2$ and $T_3$):** We have an edge $T_2 \to T_3$ (due to conflict on A) and an edge $T_3 \to T_2$ (due to conflict on B).
+2.  **Cycle 2 ($T_1$ and $T_2$):** We have an edge $T_1 \to T_2$ (due to $R_1$ before $W_2$) and an edge $T_2 \to T_1$ (due to $W_2$ before $W_1$).
+
+Because these cycles exist, there is no valid serial order that respects all dependencies.
