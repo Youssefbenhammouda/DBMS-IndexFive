@@ -259,7 +259,9 @@ graph TD
 The wait-for graph contains a cycle between T1 and T2.
 Therefore, the schedule results in a **deadlock**.
 
-**Question 2 :Is there a deadlock?**: Yes
+## Question 2 :Is there a deadlock?: 
+
+**Yes**
 
 **Which transaction is waiting on which?**
 
