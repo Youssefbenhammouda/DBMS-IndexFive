@@ -235,8 +235,29 @@ This section analyzes the following schedules to determine if they can be genera
    
 ## Part 6: Deadlocks in MNHS: 
 
+## Question 1 – Wait-For Graph
 
-**Is there a deadlock?**: Yes
+**Schedule:**  
+S = R1(A), R2(B), W1(B), W2(A)
+
+### Analysis
+- T1 acquires a lock on A.
+- T2 acquires a lock on B.
+- T1 requests B and waits for T2.
+- T2 requests A and waits for T1.
+
+### Wait-for Graph
+
+```mermaid
+graph TD
+    T1 -->|waits for B| T2
+    T2 -->|waits for A| T1
+
+### Conclusion
+The wait-for graph contains a cycle between T1 and T2.
+Therefore, the schedule results in a **deadlock**.
+
+**Question 2 :Is there a deadlock?**: Yes
 
 **Which transaction is waiting on which?**
 
