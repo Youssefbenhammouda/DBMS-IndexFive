@@ -59,3 +59,32 @@ COMMIT;
 
 -- If an error occurs (e.g., foreign key failure or constraint violation):
 -- ROLLBACK;
+```
+ **(b) Explanation**
+
+* **Atomicity:** Grouping these statements ensures Atomicity ("all or nothing"). The `START TRANSACTION` and `COMMIT`/`ROLLBACK` commands ensure that the database never ends up in a partial state where a `ClinicalActivity` exists without a corresponding `Appointment`.
+* **Without Transaction (Autocommit):** If executed separately in autocommit mode, the first `INSERT` could succeed and the second could fail (e.g., due to a constraint violation or crash). This would leave "orphan" data in the database, violating data integrity.
+
+
+### 2. Atomic update of stock and expense
+
+**(a) Pseudocode**
+
+```sql
+START TRANSACTION
+    TRY:
+        UPDATE Stock SET Qty = Qty - dispensed_amount 
+        WHERE medication_id = ...;
+        
+        -- Trigger logic typically runs automatically, but if manual:
+        UPDATE Expense SET Total = calculated_new_total 
+        WHERE activity_id = ...;
+        
+        COMMIT
+    CATCH Error:
+        ROLLBACK
+```
+**(b) Important Properties**
+
+* **Atomicity:** Crucial to ensure that stock is not deducted without the expense being recorded (or vice versa).
+* **Consistency:** Essential to ensure the invariants (Stock count matches reality, Expense matches dispensed items) remain valid.
