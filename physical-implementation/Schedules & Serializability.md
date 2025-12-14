@@ -92,50 +92,50 @@ This section analyzes the following schedules to determine if they can be genera
 **1-Schedule 1**
 
    **Schedule:**
-      R1(A), W1(A), R1(B), W1(B), R2(A), W2(A)
+      *R1(A), W1(A), R1(B), W1(B), R2(A), W2(A)
 
    **Compatible with strict 2PL**: Yes
 
    **Justification:**
-      T1 acquires locks on A and B during its growing phase and releases them only after completing all operations.
-      T2 begins only after T1 has finished, so no lock is released before commit.
-      Both transactions respect the growing and shrinking phases.
+      *T1 acquires locks on A and B during its growing phase and releases them only after completing all operations.
+      *T2 begins only after T1 has finished, so no lock is released before commit.
+      *Both transactions respect the growing and shrinking phases.
 
 
 
 **2-Schedule 2**
 
    **Schedule:**
-     R1(A), W1(A), R2(B), W2(B), R1(B)
+     *R1(A), W1(A), R2(B), W2(B), R1(B)
 
    **Compatible with strict 2PL**: No
 
    **Justification:**
-       T1 would need to acquire a lock on B after another transaction (T2) has already written B.
-       This requires either acquiring a new lock after the shrinking phase has started or releasing a write lock before commit.
+       *T1 would need to acquire a lock on B after another transaction (T2) has already written B.
+       *This requires either acquiring a new lock after the shrinking phase has started or releasing a write lock before commit.
 
 
 
 **3-Schedule 3**
 
    **Schedule:**
-       R1(A), W1(A), R1(B), W1(B), R2(C), W2(C)
+       *R1(A), W1(A), R1(B), W1(B), R2(C), W2(C)
 
    **Compatible with strict 2PL**: Yes
 
    **Justification:**
-       T1 and T2 access disjoint data items.
-       Each transaction acquires all required locks during its growing phase and releases them only after completion.
+       *T1 and T2 access disjoint data items.
+       *Each transaction acquires all required locks during its growing phase and releases them only after completion.
 
 
 
 **4-Schedule 4**
 
    **Schedule:**
-       R1(A), W1(A), R2(A), W2(A), R1(B), R2(B), W2(B)
+       *R1(A), W1(A), R2(A), W2(A), R1(B), R2(B), W2(B)
 
    **Compatible with strict 2PL:** No
 
    **Justification:**
-       The interleaving forces a transaction to either release a write lock before commit or acquire new locks after entering the shrinking phase.
-       This violates the strict separation of growing and shrinking phases required by strict 2PL.
+       *The interleaving forces a transaction to either release a write lock before commit or acquire new locks after entering the shrinking phase.
+       *This violates the strict separation of growing and shrinking phases required by strict 2PL.
