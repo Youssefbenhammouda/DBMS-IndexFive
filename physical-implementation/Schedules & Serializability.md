@@ -253,7 +253,9 @@ graph TD
     T1 -->|waits for B| T2
     T2 -->|waits for A| T1
 
+```
 ### Conclusion
+
 The wait-for graph contains a cycle between T1 and T2.
 Therefore, the schedule results in a **deadlock**.
 
