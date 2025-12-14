@@ -161,6 +161,9 @@ The cycle is: T1 → T2 → T1
 **What the DBMS should do to resolve the deadlock?**:
 
 -Detect the cycle in the wait-for graph.
+
 -Select a victim transaction.
+
 -Abort the victim transaction.
+
 -Release its locks to allow the other transaction to proceed.
