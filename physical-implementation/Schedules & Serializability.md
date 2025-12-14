@@ -1,4 +1,4 @@
-# UM6P Data Management Lab 7 - Parts 3 & 4
+# UM6P Data Management Lab 7 
 
 ## Part 3: Identifying Types of Schedules
 
