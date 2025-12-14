@@ -139,3 +139,28 @@ This section analyzes the following schedules to determine if they can be genera
    **Justification:**
        The interleaving forces a transaction to either release a write lock before commit or acquire new locks after entering the shrinking phase.
        This violates the strict separation of growing and shrinking phases required by strict 2PL.
+
+
+---
+   
+## Part 6: Deadlocks in MNHS: 
+
+
+**Is there a deadlock?**: Yes
+
+**Which transaction is waiting on which?**
+
+-T1 is waiting for T2 to release lock on B
+
+-T2 is waiting for T1 to release lock on A
+
+**Where does the cycle appear?**
+
+The cycle is: T1 → T2 → T1
+
+**What the DBMS should do to resolve the deadlock?**:
+
+-Detect the cycle in the wait-for graph.
+-Select a victim transaction.
+-Abort the victim transaction.
+-Release its locks to allow the other transaction to proceed.
