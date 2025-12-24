@@ -18,6 +18,7 @@ Deliverables
 ------------
 - Conceptual Design: `Conceptual Design/`
 - Logical Design: `Logical Design/` 
+- Physical Implementation (Web App + API): `physical-implementation/app/` — see the local [setup guide](physical-implementation/app/README.md) for running the FastAPI backend and bundled frontend.
 
 Team — IndexFive
 -----------------
@@ -59,6 +60,8 @@ The project will progress through the following phases, with future phases being
     - ERD, business rules, constraints, and scope assumptions
 2) Logical Design (current)
     - Relational schema, SQL DDL, and sample data insertion scripts
+3) Physical Implementation (in progress)
+    - FastAPI service plus compiled web UI, deployment & testing docs under `physical-implementation/app/README.md`
 
 
 Changelog
